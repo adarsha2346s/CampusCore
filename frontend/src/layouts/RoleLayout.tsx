@@ -15,6 +15,26 @@ const roleLabel: Record<Role, string> = {
   STUDENT: 'Student portal',
 }
 
+function sectionContext(role: Role, pathname: string) {
+  const path = pathname.replace(/\/$/, '')
+  if (role === 'ADMIN') {
+    if (path === '/admin/dashboard') return 'Workspace'
+    if (path === '/admin/audit') return 'Oversight'
+    if (path.startsWith('/admin/attendance')) return 'Attendance operations'
+    if (['/admin/users', '/admin/students', '/admin/faculty', '/admin/departments', '/admin/courses'].includes(path)) return 'Directory'
+    if (['/admin/enrollments', '/admin/assessments', '/admin/marks', '/admin/grading'].includes(path)) return 'Academic operations'
+    return 'Administration'
+  }
+  if (role === 'FACULTY') {
+    if (path === '/faculty/dashboard') return 'Faculty home'
+    if (path === '/faculty/students') return 'Student directory'
+    return 'Academic catalog'
+  }
+  if (path === '/student/courses') return 'Course catalog'
+  if (path === '/student/profile' || path === '/student/gpa') return 'My academic records'
+  return 'My academic workspace'
+}
+
 export function RoleLayout({ role }: { role: Role }) {
   const { user, logout } = useAuth()
   const [mobileOpenPath, setMobileOpenPath] = useState<string | null>(null)
@@ -22,8 +42,7 @@ export function RoleLayout({ role }: { role: Role }) {
   const sidebarRef = useRef<HTMLElement>(null)
   const location = useLocation()
   const mobileOpen = mobileOpenPath === location.pathname
-  const pageName = location.pathname.split('/').filter(Boolean).at(-1) ?? 'dashboard'
-  const title = pageName === 'dashboard' ? 'Overview' : pageName.replaceAll('-', ' ')
+  const context = sectionContext(role, location.pathname)
 
   useEffect(() => {
     if (!mobileOpen) return
@@ -63,8 +82,7 @@ export function RoleLayout({ role }: { role: Role }) {
         <div className="sidebar__brand"><Brand /></div>
         <RoleNavigation role={role} onNavigate={() => setMobileOpenPath(null)} />
         <div className="sidebar__footnote">
-          <span className="status-dot" aria-hidden="true" />
-          <span>CampusCore workspace</span>
+          <span>University management platform</span>
         </div>
       </aside>
 
@@ -87,7 +105,7 @@ export function RoleLayout({ role }: { role: Role }) {
           <div className="topbar__context">
             <span className="topbar__workspace">{roleLabel[role]}</span>
             <span className="topbar__divider">/</span>
-            <span className="topbar__page">{title}</span>
+            <span className="topbar__section">{context}</span>
           </div>
           <div className="topbar__account">
             <Badge>{role}</Badge>

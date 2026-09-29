@@ -1,10 +1,13 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.MarkResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.Mark;
 import com.campuscore.backend.service.MarkService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -21,7 +24,14 @@ public class MarkController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MarkResponse>> getAllMarks() {
+    public ResponseEntity<?> getAllMarks(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "markId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(markService.getMarksPage(pageable), this::toResponse));
+        }
 
         List<MarkResponse> response = markService.getAllMarks()
                 .stream()
@@ -41,8 +51,16 @@ public class MarkController {
     }
 
     @GetMapping("/enrollment/{enrollmentId}")
-    public ResponseEntity<List<MarkResponse>> getMarksByEnrollment(
-            @PathVariable Long enrollmentId) {
+    public ResponseEntity<?> getMarksByEnrollment(
+            @PathVariable Long enrollmentId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "markId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    markService.getMarksByEnrollmentPage(enrollmentId, pageable), this::toResponse));
+        }
 
         List<MarkResponse> response =
                 markService.getMarksByEnrollment(enrollmentId)
@@ -54,8 +72,16 @@ public class MarkController {
     }
 
     @GetMapping("/assessment/{assessmentId}")
-    public ResponseEntity<List<MarkResponse>> getMarksByAssessment(
-            @PathVariable Long assessmentId) {
+    public ResponseEntity<?> getMarksByAssessment(
+            @PathVariable Long assessmentId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "markId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    markService.getMarksByAssessmentPage(assessmentId, pageable), this::toResponse));
+        }
 
         List<MarkResponse> response =
                 markService.getMarksByAssessment(assessmentId)

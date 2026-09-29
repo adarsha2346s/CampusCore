@@ -7,6 +7,8 @@ import com.campuscore.backend.repository.AttendanceRecordRepository;
 import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -31,6 +33,10 @@ public class AttendanceRecordService {
         return attendanceRecordRepository.findAll();
     }
 
+    public Page<AttendanceRecord> getRecordsPage(Pageable pageable) {
+        return attendanceRecordRepository.findAll(pageable);
+    }
+
     public AttendanceRecord getRecordById(Long id) {
         return attendanceRecordRepository.findById(id)
                 .orElseThrow(() ->
@@ -46,11 +52,19 @@ public class AttendanceRecordService {
                 );
     }
 
+    public Page<AttendanceRecord> getRecordsBySessionPage(Long sessionId, Pageable pageable) {
+        return attendanceRecordRepository.findByAttendanceSessionAttendanceSessionId(sessionId, pageable);
+    }
+
     public List<AttendanceRecord> getRecordsByEnrollment(
             Long enrollmentId) {
 
         return attendanceRecordRepository
                 .findByEnrollmentEnrollmentId(enrollmentId);
+    }
+
+    public Page<AttendanceRecord> getRecordsByEnrollmentPage(Long enrollmentId, Pageable pageable) {
+        return attendanceRecordRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable);
     }
 
     public AttendanceRecord createRecord(

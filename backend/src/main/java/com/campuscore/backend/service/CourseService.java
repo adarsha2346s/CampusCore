@@ -3,6 +3,8 @@ package com.campuscore.backend.service;
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.repository.CourseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -18,6 +20,10 @@ public class CourseService {
     // Get all courses
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
+    }
+
+    public Page<Course> getCoursesPage(Pageable pageable) {
+        return courseRepository.findAll(pageable);
     }
 
     // Get course by ID

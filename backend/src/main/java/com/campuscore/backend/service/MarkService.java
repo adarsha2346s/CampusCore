@@ -7,6 +7,8 @@ import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.MarkRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,6 +34,10 @@ public class MarkService {
         return markRepository.findAll();
     }
 
+    public Page<Mark> getMarksPage(Pageable pageable) {
+        return markRepository.findAll(pageable);
+    }
+
     public Mark getMarkById(Long id) {
         return markRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mark not found"));
@@ -41,8 +47,16 @@ public class MarkService {
         return markRepository.findByEnrollmentEnrollmentId(enrollmentId);
     }
 
+    public Page<Mark> getMarksByEnrollmentPage(Long enrollmentId, Pageable pageable) {
+        return markRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable);
+    }
+
     public List<Mark> getMarksByAssessment(Long assessmentId) {
         return markRepository.findByAssessmentAssessmentId(assessmentId);
+    }
+
+    public Page<Mark> getMarksByAssessmentPage(Long assessmentId, Pageable pageable) {
+        return markRepository.findByAssessmentAssessmentId(assessmentId, pageable);
     }
 
     public Mark createMark(

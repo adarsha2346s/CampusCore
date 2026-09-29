@@ -1,6 +1,9 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.StudentResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
+import com.campuscore.backend.dto.StudentSelfResponse;
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.StudentRepository;
@@ -9,6 +12,7 @@ import com.campuscore.backend.service.StudentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -34,8 +38,37 @@ public class StudentController {
         this.userRepository = userRepository;
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<StudentSelfResponse> getMyStudentProfile(
+            Authentication authentication) {
+
+        if (!hasRole(authentication, "ROLE_STUDENT")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Student student = studentService.getStudentForUsername(authentication.getName());
+        StudentSelfResponse response = new StudentSelfResponse(
+                student.getStudentId(),
+                student.getEnrollmentNumber(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getDepartment().getName(),
+                student.getAdmissionYear(),
+                student.getStatus().name()
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
-    public ResponseEntity<List<StudentResponse>> getAllStudents() {
+    public ResponseEntity<?> getAllStudents(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "studentId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    studentService.getStudentsPage(pageable), this::toResponse));
+        }
 
         List<StudentResponse> students =
                 studentService.getAllStudents()
@@ -53,10 +86,7 @@ public class StudentController {
 
         Student student = studentService.getStudentById(id);
 
-        boolean isStudent = authentication.getAuthorities()
-                .stream()
-                .anyMatch(authority ->
-                        authority.getAuthority().equals("ROLE_STUDENT"));
+        boolean isStudent = hasRole(authentication, "ROLE_STUDENT");
 
         if (isStudent && !isOwnStudent(authentication, id)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -81,6 +111,11 @@ public class StudentController {
                 .findByUserUserId(user.getUserId())
                 .map(student -> student.getStudentId().equals(studentId))
                 .orElse(false);
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(role));
     }
 
     @PostMapping

@@ -7,6 +7,8 @@ import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,6 +34,10 @@ public class AttendanceSessionService {
         return attendanceSessionRepository.findAll();
     }
 
+    public Page<AttendanceSession> getSessionsPage(Pageable pageable) {
+        return attendanceSessionRepository.findAll(pageable);
+    }
+
     public AttendanceSession getSessionById(Long id) {
         return attendanceSessionRepository.findById(id)
                 .orElseThrow(() ->
@@ -42,8 +48,16 @@ public class AttendanceSessionService {
         return attendanceSessionRepository.findByCourseCourseId(courseId);
     }
 
+    public Page<AttendanceSession> getSessionsByCoursePage(Long courseId, Pageable pageable) {
+        return attendanceSessionRepository.findByCourseCourseId(courseId, pageable);
+    }
+
     public List<AttendanceSession> getSessionsByFaculty(Long facultyId) {
         return attendanceSessionRepository.findByFacultyFacultyId(facultyId);
+    }
+
+    public Page<AttendanceSession> getSessionsByFacultyPage(Long facultyId, Pageable pageable) {
+        return attendanceSessionRepository.findByFacultyFacultyId(facultyId, pageable);
     }
 
     public AttendanceSession createSession(

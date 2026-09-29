@@ -7,6 +7,8 @@ import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +32,14 @@ public class EnrollmentService {
 
     public List<Enrollment> getAllEnrollments() {
         return enrollmentRepository.findAll();
+    }
+
+    public Page<Enrollment> getEnrollmentsPage(Pageable pageable) {
+        return enrollmentRepository.findAll(pageable);
+    }
+
+    public List<Enrollment> getEnrollmentsForStudent(Long studentId) {
+        return enrollmentRepository.findByStudentStudentId(studentId);
     }
 
     public Enrollment getEnrollmentById(Long id) {

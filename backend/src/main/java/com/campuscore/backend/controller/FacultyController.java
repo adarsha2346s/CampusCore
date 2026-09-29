@@ -1,6 +1,9 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.FacultyResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
+import com.campuscore.backend.dto.FacultySelfResponse;
 import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.FacultyRepository;
@@ -8,6 +11,7 @@ import com.campuscore.backend.repository.UserRepository;
 import com.campuscore.backend.service.FacultyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,8 +35,37 @@ public class FacultyController {
         this.facultyRepository = facultyRepository;
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<FacultySelfResponse> getMyFacultyProfile(
+            Authentication authentication) {
+
+        boolean isFaculty = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_FACULTY"));
+        if (!isFaculty) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Faculty faculty = facultyService.getFacultyForUsername(authentication.getName());
+        FacultySelfResponse response = new FacultySelfResponse(
+                faculty.getEmployeeNumber(),
+                faculty.getFirstName(),
+                faculty.getLastName(),
+                faculty.getDepartment().getName(),
+                faculty.getStatus().name()
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
-    public ResponseEntity<List<FacultyResponse>> getAllFaculty() {
+    public ResponseEntity<?> getAllFaculty(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "facultyId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    facultyService.getFacultyPage(pageable), this::toResponse));
+        }
 
         List<FacultyResponse> faculty =
                 facultyService.getAllFaculty()

@@ -5,6 +5,7 @@
 !.env.*.example
 backend/src/main/resources/application*.properties
 !backend/src/main/resources/application-example.properties
+!backend/src/main/resources/application-production.properties
 backend/src/main/resources/application*.yml
 !backend/src/main/resources/application-example.yml
 backend/src/main/resources/application*.yaml
@@ -40,6 +41,8 @@ pnpm-debug.log*
 *.p12
 *.pfx
 *.jks
+*.keystore
+*.truststore
 id_rsa*
 id_ed25519*
 
@@ -58,3 +61,16 @@ id_ed25519*
 /github-readiness-report.md
 /password-reset-execution-report.md
 /password-reset-review.md
+/frontend-audit.md
+/PASS-2-VERIFICATION-REPORT.md
+/pass2-completion-report.md
+/PASS-3-FINAL-REPORT.md
+/FINAL-LIVE-VERIFICATION-REPORT.md
+/PORTFOLIO-UPGRADE-REPORT.md
+/PAGINATION-IMPLEMENTATION-REPORT.md
+/GITHUB-PUBLIC-RELEASE-AUDIT.md
+/DEMO-DATA-AND-SCREENSHOT-READINESS-REPORT.md
+/DEMO-RUNTIME-VERIFICATION-REPORT.md
+/DEMO-SEED-IMPLEMENTATION-REPORT.md
+/PUBLIC-RELEASE-FIX-REPORT.md
+/FINAL-RELEASE-REPORT.md

@@ -2,6 +2,8 @@ package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.CourseRequest;
 import com.campuscore.backend.dto.CourseResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Department;
 import com.campuscore.backend.service.CourseService;
@@ -9,6 +11,7 @@ import com.campuscore.backend.service.DepartmentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +36,15 @@ public class CourseController {
 
     // GET all courses
     @GetMapping
-    public ResponseEntity<List<CourseResponse>> getAllCourses() {
+    public ResponseEntity<?> getAllCourses(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "courseId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    courseService.getCoursesPage(pageable), this::toResponse));
+        }
 
         List<CourseResponse> response =
                 courseService.getAllCourses()

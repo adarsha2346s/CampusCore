@@ -7,6 +7,10 @@ import com.campuscore.backend.repository.DepartmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -31,9 +35,27 @@ public class FacultyService {
         return facultyRepository.findAll();
     }
 
+    public Page<Faculty> getFacultyPage(Pageable pageable) {
+        return facultyRepository.findAll(pageable);
+    }
+
     public Faculty getFacultyById(Long id) {
         return facultyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
+    }
+
+    public Faculty getFacultyForUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Faculty profile is not linked to this account"
+                ));
+
+        return facultyRepository.findByUserUserId(user.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Faculty profile is not linked to this account"
+                ));
     }
 
     public Faculty createFaculty(

@@ -1,11 +1,14 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.AttendanceSessionResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.AttendanceSession;
 import com.campuscore.backend.service.AttendanceSessionService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -23,7 +26,15 @@ public class AttendanceSessionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AttendanceSessionResponse>> getAllSessions() {
+    public ResponseEntity<?> getAllSessions(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceSessionId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceSessionService.getSessionsPage(pageable), this::toResponse));
+        }
 
         List<AttendanceSessionResponse> response =
                 attendanceSessionService.getAllSessions()
@@ -46,8 +57,16 @@ public class AttendanceSessionController {
     }
 
     @GetMapping("/course/{courseId}")
-    public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByCourse(
-            @PathVariable Long courseId) {
+    public ResponseEntity<?> getSessionsByCourse(
+            @PathVariable Long courseId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceSessionId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceSessionService.getSessionsByCoursePage(courseId, pageable), this::toResponse));
+        }
 
         List<AttendanceSessionResponse> response =
                 attendanceSessionService.getSessionsByCourse(courseId)
@@ -59,8 +78,16 @@ public class AttendanceSessionController {
     }
 
     @GetMapping("/faculty/{facultyId}")
-    public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByFaculty(
-            @PathVariable Long facultyId) {
+    public ResponseEntity<?> getSessionsByFaculty(
+            @PathVariable Long facultyId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceSessionId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceSessionService.getSessionsByFacultyPage(facultyId, pageable), this::toResponse));
+        }
 
         List<AttendanceSessionResponse> response =
                 attendanceSessionService.getSessionsByFaculty(facultyId)

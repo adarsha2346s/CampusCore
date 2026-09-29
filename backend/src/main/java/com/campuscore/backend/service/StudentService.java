@@ -8,6 +8,10 @@ import com.campuscore.backend.repository.DepartmentRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -33,10 +37,28 @@ public class StudentService {
         return studentRepository.findAll();
     }
 
+    public Page<Student> getStudentsPage(Pageable pageable) {
+        return studentRepository.findAll(pageable);
+    }
+
     // Get student by ID
     public Student getStudentById(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
+    }
+
+    public Student getStudentForUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Student profile is not linked to this account"
+                ));
+
+        return studentRepository.findByUserUserId(user.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Student profile is not linked to this account"
+                ));
     }
 
     // Create student

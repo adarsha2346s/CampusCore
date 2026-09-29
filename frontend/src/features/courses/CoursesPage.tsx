@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -16,12 +17,14 @@ import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
 import { departmentKeys, getDepartments } from '../departments/departments.api'
 import { CourseFormDialog } from './CourseFormDialog'
-import { createCourse, courseKeys, deleteCourse, getCourses, updateCourse } from './courses.api'
+import { createCourse, courseKeys, deleteCourse, getCoursesPage, updateCourse } from './courses.api'
 import type { CourseRequest, CourseResponse } from '../../types/api'
 
 export function CoursesPage() {
   const client = useQueryClient()
-  const courses = useQuery({ queryKey: courseKeys.all, queryFn: getCourses })
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  const courses = useQuery({ queryKey: courseKeys.page(page, pageSize), queryFn: () => getCoursesPage(page, pageSize) })
   const departments = useQuery({ queryKey: departmentKeys.all, queryFn: getDepartments })
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
@@ -33,7 +36,7 @@ export function CoursesPage() {
   const update = useMutation({ mutationFn: ({ id, request }: { id: number; request: CourseRequest }) => updateCourse(id, request), onSuccess: async () => { await refresh(); setFormOpen(false); setEditing(null); toast.success('Course updated') } })
   const remove = useMutation({ mutationFn: deleteCourse, onSuccess: async () => { await refresh(); toast.success('Course deleted') } })
   const departmentById = useMemo(() => new Map((departments.data ?? []).map((department) => [department.departmentId, department])), [departments.data])
-  const filtered = useMemo(() => (courses.data ?? []).filter((course) => {
+  const filtered = useMemo(() => (courses.data?.content ?? []).filter((course) => {
     const department = departmentById.get(course.departmentId)
     const matchSearch = `${course.courseCode} ${course.courseName} ${department?.name ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())
     return matchSearch && (status === 'ALL' || course.status === status) && (departmentId === 'ALL' || String(course.departmentId) === departmentId)
@@ -57,10 +60,10 @@ export function CoursesPage() {
       <PageHeader eyebrow="Academic catalog" title="Courses" description="Maintain catalog details, credit values and enrollment capacity." action={<Button onClick={() => { setEditing(null); setFormOpen(true) }} disabled={departments.isPending || departments.isError || departments.data?.length === 0}><Plus size={17} aria-hidden="true" /> Add course</Button>} />
       {departments.isError && <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />}
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search courses" countLabel={`${filtered.length} of ${courses.data?.length ?? 0} courses`} filters={(
-          <><SelectField label="Status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${courses.data?.totalElements ?? 0} total`} filters={(
+          <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {courses.isPending ? <LoadingState label="Loading courses" /> : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} /> : filtered.length === 0 ? <EmptyState title={courses.data.length === 0 ? 'No courses yet' : 'No courses match these filters'} description={courses.data.length === 0 ? 'Create a department first, then add its courses to the catalog.' : 'Try another search, status or department.'} /> : (
+        {courses.isPending ? <LoadingState label="Loading courses" /> : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} /> : filtered.length === 0 ? <EmptyState title={courses.data.totalElements === 0 ? 'No courses yet' : 'No courses on this page match these filters'} description={courses.data.totalElements === 0 ? 'Create a department first, then add its courses to the catalog.' : 'Try another search, status, department or page.'} /> : (
           <ResourceTable caption="Course catalog" columns={columns} rows={filtered} getRowKey={(course) => course.courseId} actions={(course) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`Edit ${course.courseCode}`} title="Edit course" onClick={() => { setEditing(course); setFormOpen(true) }}><Pencil size={16} /></Button>
@@ -68,6 +71,7 @@ export function CoursesPage() {
             </div>
           )} />
         )}
+        {!courses.isPending && !courses.isError && courses.data && <PaginationControls page={courses.data.page} size={courses.data.size} totalElements={courses.data.totalElements} totalPages={courses.data.totalPages} onPageChange={setPage} />}
       </Card>
       <CourseFormDialog open={formOpen} onOpenChange={setFormOpen} course={editing} departments={departments.data ?? []} onSubmit={save} />
     </div>

@@ -1,5 +1,13 @@
 export type Role = 'ADMIN' | 'FACULTY' | 'STUDENT'
 
+export interface PageResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface LoginRequest {
   username: string
   password: string
@@ -17,6 +25,24 @@ export interface MeResponse {
   email: string
   role: Role
   active: boolean
+}
+
+export interface StudentSelfResponse {
+  studentId: number
+  enrollmentNumber: string
+  firstName: string
+  lastName: string | null
+  departmentName: string
+  admissionYear: number
+  status: 'ACTIVE' | 'INACTIVE' | 'GRADUATED'
+}
+
+export interface FacultySelfResponse {
+  employeeNumber: string
+  firstName: string
+  lastName: string | null
+  departmentName: string
+  status: 'ACTIVE' | 'INACTIVE'
 }
 
 export interface UserRequest {

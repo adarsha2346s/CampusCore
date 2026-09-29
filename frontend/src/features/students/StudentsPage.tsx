@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -18,12 +19,14 @@ import { notifyError } from '../admin-shared/feedback'
 import { getDepartments, departmentKeys } from '../departments/departments.api'
 import { getUsers, userKeys } from '../users/users.api'
 import { StudentFormDialog } from './StudentFormDialog'
-import { createStudent, deactivateStudent, getStudents, studentKeys, updateStudent } from './students.api'
+import { createStudent, deactivateStudent, getStudentsPage, studentKeys, updateStudent } from './students.api'
 import type { StudentRequest, StudentResponse } from '../../types/api'
 
 export function StudentsPage() {
   const client = useQueryClient()
-  const students = useQuery({ queryKey: studentKeys.all, queryFn: getStudents })
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  const students = useQuery({ queryKey: studentKeys.page(page, pageSize), queryFn: () => getStudentsPage(page, pageSize) })
   const users = useQuery({ queryKey: userKeys.all, queryFn: getUsers })
   const departments = useQuery({ queryKey: departmentKeys.all, queryFn: getDepartments })
   const [search, setSearch] = useState('')
@@ -38,11 +41,11 @@ export function StudentsPage() {
   const update = useMutation({ mutationFn: ({ id, request }: { id: number; request: StudentRequest }) => updateStudent(id, request), onSuccess: async () => { await refresh(); setFormOpen(false); setEditing(null); toast.success('Student profile updated') } })
   const deactivate = useMutation({ mutationFn: deactivateStudent, onSuccess: async () => { await refresh(); toast.success('Student profile deactivated') } })
 
-  const linkedUserIds = new Set((students.data ?? []).filter((student) => student.studentId !== editing?.studentId).map((student) => student.userId))
+  const linkedUserIds = new Set((students.data?.content ?? []).filter((student) => student.studentId !== editing?.studentId).map((student) => student.userId))
   const availableUsers = (users.data ?? []).filter((user) => user.role === 'STUDENT' && user.active && !linkedUserIds.has(user.userId))
   const userById = useMemo(() => new Map((users.data ?? []).map((user) => [user.userId, user])), [users.data])
   const departmentById = new Map((departments.data ?? []).map((department) => [department.departmentId, department]))
-  const filtered = useMemo(() => (students.data ?? []).filter((student) => {
+  const filtered = useMemo(() => (students.data?.content ?? []).filter((student) => {
     const user = userById.get(student.userId)
     const matchSearch = `${student.firstName} ${student.lastName ?? ''} ${student.enrollmentNumber} ${user?.username ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())
     return matchSearch && (status === 'ALL' || student.status === status) && (departmentId === 'ALL' || String(student.departmentId) === departmentId)
@@ -68,10 +71,10 @@ export function StudentsPage() {
       <PageHeader eyebrow="Academic directory" title="Students" description="Maintain student profiles, enrollment identity and department placement." action={<Button onClick={() => { setEditing(null); setFormOpen(true) }} disabled={users.isError || users.isPending || departments.isError || departments.isPending || departments.data?.length === 0 || availableUsers.length === 0}><Plus size={17} aria-hidden="true" /> Add student</Button>} />
       {(users.isError || departments.isError) && <ErrorState error={users.error ?? departments.error} onRetry={() => { void users.refetch(); void departments.refetch() }} />}
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search students" countLabel={`${filtered.length} of ${students.data?.length ?? 0} students`} filters={(
-          <><SelectField label="Status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="GRADUATED">Graduated</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${students.data?.totalElements ?? 0} total`} filters={(
+          <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="GRADUATED">Graduated</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {students.isPending ? <LoadingState label="Loading student records" /> : students.isError ? <ErrorState error={students.error} onRetry={() => void students.refetch()} /> : filtered.length === 0 ? <EmptyState title={students.data.length === 0 ? 'No student profiles yet' : 'No students match these filters'} description={students.data.length === 0 ? 'Create or select a user account with the STUDENT role, then add a profile.' : 'Try another name, department or status.'} /> : (
+        {students.isPending ? <LoadingState label="Loading student records" /> : students.isError ? <ErrorState error={students.error} onRetry={() => void students.refetch()} /> : filtered.length === 0 ? <EmptyState title={students.data.totalElements === 0 ? 'No student profiles yet' : 'No students on this page match these filters'} description={students.data.totalElements === 0 ? 'Create or select a user account with the STUDENT role, then add a profile.' : 'Try another name, department or move to another page.'} /> : (
           <ResourceTable caption="Student directory" columns={columns} rows={filtered} getRowKey={(student) => student.studentId} actions={(student) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`View ${student.firstName} ${student.lastName ?? ''}`} title="View details" onClick={() => setViewing(student)}><Eye size={16} /></Button>
@@ -80,6 +83,7 @@ export function StudentsPage() {
             </div>
           )} />
         )}
+        {!students.isPending && !students.isError && students.data && <PaginationControls page={students.data.page} size={students.data.size} totalElements={students.data.totalElements} totalPages={students.data.totalPages} onPageChange={setPage} />}
       </Card>
       <StudentFormDialog open={formOpen} onOpenChange={setFormOpen} student={editing} users={availableUsers} departments={departments.data ?? []} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`${viewing.firstName} ${viewing.lastName ?? ''}`} description="Student academic profile" fields={[

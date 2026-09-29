@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -18,19 +19,21 @@ import { getCourses } from '../courses/courses.api'
 import { getEnrollments } from '../enrollments/enrollments.api'
 import { getStudents } from '../students/students.api'
 import { MarkFormDialog } from './MarkFormDialog'
-import { createMark, getMark, getMarks, getMarksByAssessment, getMarksByEnrollment, markKeys } from './marks.api'
+import { createMark, getMark, getMarksPage, getMarksByAssessmentPage, getMarksByEnrollmentPage, markKeys } from './marks.api'
 import type { MarkResponse } from '../../types/api'
 
 export function MarksPage() {
   const client = useQueryClient()
+  const [page, setPage] = useState(0)
+  const pageSize = 20
   const [search, setSearch] = useState('')
   const [enrollmentId, setEnrollmentId] = useState('ALL')
   const [assessmentId, setAssessmentId] = useState('ALL')
   const [formOpen, setFormOpen] = useState(false)
   const [viewing, setViewing] = useState<MarkResponse | null>(null)
   const marks = useQuery({
-    queryKey: enrollmentId !== 'ALL' ? markKeys.byEnrollment(enrollmentId) : assessmentId !== 'ALL' ? markKeys.byAssessment(assessmentId) : markKeys.all,
-    queryFn: () => enrollmentId !== 'ALL' ? getMarksByEnrollment(Number(enrollmentId)) : assessmentId !== 'ALL' ? getMarksByAssessment(Number(assessmentId)) : getMarks(),
+    queryKey: markKeys.filteredPage(page, pageSize, enrollmentId, assessmentId),
+    queryFn: () => enrollmentId !== 'ALL' ? getMarksByEnrollmentPage(Number(enrollmentId), page, pageSize) : assessmentId !== 'ALL' ? getMarksByAssessmentPage(Number(assessmentId), page, pageSize) : getMarksPage(page, pageSize),
   })
   const enrollments = useQuery({ queryKey: ['admin', 'enrollments'], queryFn: getEnrollments })
   const assessments = useQuery({ queryKey: ['admin', 'assessments'], queryFn: getAssessments })
@@ -42,7 +45,7 @@ export function MarksPage() {
   const assessmentById = useMemo(() => new Map((assessments.data ?? []).map((item) => [item.assessmentId, item])), [assessments.data])
   const studentById = useMemo(() => new Map((students.data ?? []).map((item) => [item.studentId, item])), [students.data])
   const courseById = useMemo(() => new Map((courses.data ?? []).map((item) => [item.courseId, item])), [courses.data])
-  const filtered = useMemo(() => (marks.data ?? []).filter((mark) => {
+  const filtered = useMemo(() => (marks.data?.content ?? []).filter((mark) => {
     const enrollment = enrollmentById.get(mark.enrollmentId)
     const assessment = assessmentById.get(mark.assessmentId)
     const course = assessment ? courseById.get(assessment.courseId) : undefined
@@ -68,12 +71,13 @@ export function MarksPage() {
     <div className="admin-page">
       <PageHeader eyebrow="Academic operations" title="Marks" description="Review and record marks against course assessments and student enrollments." action={<Button onClick={() => setFormOpen(true)} disabled={dependenciesPending || Boolean(dependencyError) || !enrollments.data?.length || !assessments.data?.length}><Plus size={17} aria-hidden="true" /> Enter mark</Button>} />
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search marks" countLabel={`${filtered.length} matching marks`} filters={(
-          <><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => setEnrollmentId(event.target.value)}><option value="ALL">All enrollments</option>{enrollments.data?.map((item) => <option key={item.enrollmentId} value={item.enrollmentId}>#{item.enrollmentId} · {studentById.get(item.studentId)?.enrollmentNumber ?? `Student #${item.studentId}`}</option>)}</SelectField><SelectField label="Assessment" value={assessmentId} onChange={(event) => setAssessmentId(event.target.value)}><option value="ALL">All assessments</option>{assessments.data?.map((item) => <option key={item.assessmentId} value={item.assessmentId}>{item.name}</option>)}</SelectField></>
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${marks.data?.totalElements ?? 0} total`} filters={(
+          <><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => { setEnrollmentId(event.target.value); setPage(0) }}><option value="ALL">All enrollments</option>{enrollments.data?.map((item) => <option key={item.enrollmentId} value={item.enrollmentId}>#{item.enrollmentId} · {studentById.get(item.studentId)?.enrollmentNumber ?? `Student #${item.studentId}`}</option>)}</SelectField><SelectField label="Assessment" value={assessmentId} onChange={(event) => { setAssessmentId(event.target.value); setPage(0) }}><option value="ALL">All assessments</option>{assessments.data?.map((item) => <option key={item.assessmentId} value={item.assessmentId}>{item.name}</option>)}</SelectField></>
         )} />
-        {marks.isPending ? <LoadingState label="Loading marks" /> : marks.isError ? <ErrorState error={marks.error} onRetry={() => void marks.refetch()} /> : filtered.length === 0 ? <EmptyState title={marks.data.length ? 'No marks match these filters' : 'No marks recorded yet'} description={marks.data.length ? 'Try another enrollment, assessment or search term.' : 'Record a mark after an enrollment and assessment exist.'} /> : (
+        {marks.isPending ? <LoadingState label="Loading marks" /> : marks.isError ? <ErrorState error={marks.error} onRetry={() => void marks.refetch()} /> : filtered.length === 0 ? <EmptyState title={marks.data.totalElements ? 'No marks on this page match' : 'No marks recorded yet'} description={marks.data.totalElements ? 'Try another enrollment, assessment, search term or page.' : 'Record a mark after an enrollment and assessment exist.'} /> : (
           <ResourceTable caption="Marks directory" columns={columns} rows={filtered} getRowKey={(mark) => mark.markId} actions={(mark) => <Button size="sm" variant="ghost" title="View mark details" aria-label={`View mark ${mark.markId}`} onClick={() => setViewing(mark)}><Eye size={16} /></Button>} />
         )}
+        {!marks.isPending && !marks.isError && marks.data && <PaginationControls page={marks.data.page} size={marks.data.size} totalElements={marks.data.totalElements} totalPages={marks.data.totalPages} onPageChange={setPage} />}
       </Card>
       {dependencyError && <ErrorState error={dependencyError} onRetry={() => { void enrollments.refetch(); void assessments.refetch(); void students.refetch(); void courses.refetch() }} />}
       <MarkFormDialog open={formOpen} onOpenChange={setFormOpen} enrollments={enrollments.data ?? []} assessments={assessments.data ?? []} students={students.data ?? []} courses={courses.data ?? []} onSubmit={save} />

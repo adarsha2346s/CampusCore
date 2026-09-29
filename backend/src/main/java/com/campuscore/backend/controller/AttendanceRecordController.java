@@ -1,10 +1,13 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.AttendanceRecordResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.AttendanceRecord;
 import com.campuscore.backend.service.AttendanceRecordService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +24,15 @@ public class AttendanceRecordController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AttendanceRecordResponse>> getAllRecords() {
+    public ResponseEntity<?> getAllRecords(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceRecordId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceRecordService.getRecordsPage(pageable), this::toResponse));
+        }
 
         List<AttendanceRecordResponse> records =
                 attendanceRecordService.getAllRecords()
@@ -43,8 +54,16 @@ public class AttendanceRecordController {
     }
 
     @GetMapping("/session/{attendanceSessionId}")
-    public ResponseEntity<List<AttendanceRecordResponse>> getRecordsBySession(
-            @PathVariable Long attendanceSessionId) {
+    public ResponseEntity<?> getRecordsBySession(
+            @PathVariable Long attendanceSessionId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceRecordId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceRecordService.getRecordsBySessionPage(attendanceSessionId, pageable), this::toResponse));
+        }
 
         List<AttendanceRecordResponse> records =
                 attendanceRecordService
@@ -57,8 +76,16 @@ public class AttendanceRecordController {
     }
 
     @GetMapping("/enrollment/{enrollmentId}")
-    public ResponseEntity<List<AttendanceRecordResponse>> getRecordsByEnrollment(
-            @PathVariable Long enrollmentId) {
+    public ResponseEntity<?> getRecordsByEnrollment(
+            @PathVariable Long enrollmentId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "attendanceRecordId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    attendanceRecordService.getRecordsByEnrollmentPage(enrollmentId, pageable), this::toResponse));
+        }
 
         List<AttendanceRecordResponse> records =
                 attendanceRecordService

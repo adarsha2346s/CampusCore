@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -17,14 +18,16 @@ import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
 import { UserFormDialog } from './UserFormDialog'
-import { createUser, deactivateUser, getUsers, updateUser, userKeys } from './users.api'
+import { createUser, deactivateUser, getUsersPage, updateUser, userKeys } from './users.api'
 import type { Role, UserRequest, UserResponse } from '../../types/api'
 
 const roleLabels: Record<Role, string> = { ADMIN: 'Administrator', FACULTY: 'Faculty', STUDENT: 'Student' }
 
 export function UsersPage() {
   const queryClient = useQueryClient()
-  const users = useQuery({ queryKey: userKeys.all, queryFn: getUsers })
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  const users = useQuery({ queryKey: userKeys.page(page, pageSize), queryFn: () => getUsersPage(page, pageSize) })
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('ALL')
   const [active, setActive] = useState('ALL')
@@ -38,7 +41,7 @@ export function UsersPage() {
   const update = useMutation({ mutationFn: ({ id, request }: { id: number; request: UserRequest }) => updateUser(id, request), onSuccess: async () => { await refresh(); setFormOpen(false); setEditing(null); setNotice('User account updated.'); toast.success('User account updated') } })
   const deactivate = useMutation({ mutationFn: deactivateUser, onSuccess: async () => { await refresh(); setNotice('User account deactivated.'); toast.success('User account deactivated') } })
 
-  const filtered = useMemo(() => (users.data ?? []).filter((user) => {
+  const filtered = useMemo(() => (users.data?.content ?? []).filter((user) => {
     const matchSearch = `${user.username} ${user.email}`.toLowerCase().includes(search.trim().toLowerCase())
     return matchSearch && (role === 'ALL' || user.role === role) && (active === 'ALL' || String(user.active) === active)
   }), [users.data, search, role, active])
@@ -60,11 +63,11 @@ export function UsersPage() {
     <div className="admin-page">
       <PageHeader eyebrow="Access management" title="Users" description="Manage account identity, role access and active status." action={<Button onClick={() => { setEditing(null); setFormOpen(true) }}><Plus size={17} aria-hidden="true" /> Add user</Button>} />
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search users" countLabel={`${filtered.length} of ${users.data?.length ?? 0} accounts`} filters={(
-          <><SelectField label="Role" value={role} onChange={(event) => setRole(event.target.value)}><option value="ALL">All roles</option><option value="ADMIN">Administrators</option><option value="FACULTY">Faculty</option><option value="STUDENT">Students</option></SelectField><SelectField label="Status" value={active} onChange={(event) => setActive(event.target.value)}><option value="ALL">All statuses</option><option value="true">Active</option><option value="false">Inactive</option></SelectField></>
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${users.data?.totalElements ?? 0} total`} filters={(
+          <><SelectField label="Role" value={role} onChange={(event) => { setRole(event.target.value); setPage(0) }}><option value="ALL">All roles</option><option value="ADMIN">Administrators</option><option value="FACULTY">Faculty</option><option value="STUDENT">Students</option></SelectField><SelectField label="Status" value={active} onChange={(event) => { setActive(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="true">Active</option><option value="false">Inactive</option></SelectField></>
         )} />
         {notice && <p className="sr-only" role="status">{notice}</p>}
-        {users.isPending ? <LoadingState label="Loading user accounts" /> : users.isError ? <ErrorState error={users.error} onRetry={() => void users.refetch()} /> : filtered.length === 0 ? <EmptyState title={users.data.length === 0 ? 'No user accounts yet' : 'No accounts match these filters'} description={users.data.length === 0 ? 'Create an account to get started.' : 'Try changing your search or filters.'} /> : (
+        {users.isPending ? <LoadingState label="Loading user accounts" /> : users.isError ? <ErrorState error={users.error} onRetry={() => void users.refetch()} /> : filtered.length === 0 ? <EmptyState title={users.data.totalElements === 0 ? 'No user accounts yet' : 'No accounts on this page match these filters'} description={users.data.totalElements === 0 ? 'Create an account to get started.' : 'Try changing filters or moving to another page.'} /> : (
           <ResourceTable caption="Campus user accounts" columns={columns} rows={filtered} getRowKey={(user) => user.userId} actions={(user) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`View ${user.username}`} title="View details" onClick={() => setViewing(user)}><Eye size={16} /></Button>
@@ -73,6 +76,7 @@ export function UsersPage() {
             </div>
           )} />
         )}
+        {!users.isPending && !users.isError && users.data && <PaginationControls page={users.data.page} size={users.data.size} totalElements={users.data.totalElements} totalPages={users.data.totalPages} onPageChange={setPage} />}
       </Card>
       <UserFormDialog open={formOpen} onOpenChange={setFormOpen} user={editing} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={viewing.username} description="User account details" fields={[{ label: 'User ID', value: viewing.userId }, { label: 'Email', value: viewing.email }, { label: 'Role', value: roleLabels[viewing.role] }, { label: 'Status', value: viewing.active ? 'Active' : 'Inactive' }]} />}

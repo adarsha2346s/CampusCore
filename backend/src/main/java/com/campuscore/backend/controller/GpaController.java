@@ -79,8 +79,8 @@ public class GpaController {
                 .findById(enrollmentId)
                 .orElse(null);
 
-        return enrollment == null
-                || enrollment.getStudent().getStudentId()
+        return enrollment != null
+                && enrollment.getStudent().getStudentId()
                 .equals(student.getStudentId());
     }
 }

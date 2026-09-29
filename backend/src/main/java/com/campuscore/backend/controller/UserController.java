@@ -2,11 +2,14 @@ package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.UserRequest;
 import com.campuscore.backend.dto.UserResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +29,15 @@ public class UserController {
 
     // GET all users
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "userId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    userService.getUsersPage(pageable), this::toUserResponse));
+        }
 
         List<UserResponse> users = userService.getAllUsers()
                 .stream()

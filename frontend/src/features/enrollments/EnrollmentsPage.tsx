@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -17,12 +18,14 @@ import { notifyError } from '../admin-shared/feedback'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { getStudents, studentKeys } from '../students/students.api'
 import { EnrollmentFormDialog } from './EnrollmentFormDialog'
-import { createEnrollment, enrollmentKeys, getEnrollment, getEnrollments } from './enrollments.api'
+import { createEnrollment, enrollmentKeys, getEnrollment, getEnrollmentsPage } from './enrollments.api'
 import type { EnrollmentResponse } from '../../types/api'
 
 export function EnrollmentsPage() {
   const client = useQueryClient()
-  const enrollments = useQuery({ queryKey: enrollmentKeys.all, queryFn: getEnrollments })
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  const enrollments = useQuery({ queryKey: enrollmentKeys.page(page, pageSize), queryFn: () => getEnrollmentsPage(page, pageSize) })
   const students = useQuery({ queryKey: studentKeys.all, queryFn: getStudents })
   const courses = useQuery({ queryKey: courseKeys.all, queryFn: getCourses })
   const [search, setSearch] = useState('')
@@ -34,7 +37,7 @@ export function EnrollmentsPage() {
   const detail = useQuery({ queryKey: enrollmentKeys.detail(viewing?.enrollmentId ?? 0), queryFn: () => getEnrollment(viewing!.enrollmentId), enabled: viewing !== null })
   const studentById = useMemo(() => new Map((students.data ?? []).map((student) => [student.studentId, student])), [students.data])
   const courseById = useMemo(() => new Map((courses.data ?? []).map((course) => [course.courseId, course])), [courses.data])
-  const filtered = useMemo(() => (enrollments.data ?? []).filter((enrollment) => {
+  const filtered = useMemo(() => (enrollments.data?.content ?? []).filter((enrollment) => {
     const student = studentById.get(enrollment.studentId)
     const course = courseById.get(enrollment.courseId)
     const match = `${student?.enrollmentNumber ?? ''} ${student?.firstName ?? ''} ${student?.lastName ?? ''} ${course?.courseCode ?? ''} ${course?.courseName ?? ''} ${enrollment.semester} ${enrollment.academicYear}`.toLowerCase().includes(search.trim().toLowerCase())
@@ -57,10 +60,11 @@ export function EnrollmentsPage() {
     <div className="admin-page">
       <PageHeader eyebrow="Academic operations" title="Enrollments" description="Review course registrations and create new student-course enrollments." action={<Button onClick={() => setFormOpen(true)} disabled={students.isPending || students.isError || courses.isPending || courses.isError}><Plus size={17} aria-hidden="true" /> Create enrollment</Button>} />
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search enrollments" countLabel={`${filtered.length} matching enrollments`} filters={<SelectField label="Status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="ALL">All statuses</option><option value="ENROLLED">Enrolled</option><option value="DROPPED">Dropped</option><option value="COMPLETED">Completed</option></SelectField>} />
-        {enrollments.isPending ? <LoadingState label="Loading enrollments" /> : enrollments.isError ? <ErrorState error={enrollments.error} onRetry={() => void enrollments.refetch()} /> : filtered.length === 0 ? <EmptyState title={enrollments.data.length ? 'No enrollments match this search' : 'No enrollments yet'} description={enrollments.data.length ? 'Try another student, course or status.' : 'Create an enrollment from an active student and active course.'} /> : (
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${enrollments.data?.totalElements ?? 0} total`} filters={<SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ENROLLED">Enrolled</option><option value="DROPPED">Dropped</option><option value="COMPLETED">Completed</option></SelectField>} />
+        {enrollments.isPending ? <LoadingState label="Loading enrollments" /> : enrollments.isError ? <ErrorState error={enrollments.error} onRetry={() => void enrollments.refetch()} /> : filtered.length === 0 ? <EmptyState title={enrollments.data.totalElements ? 'No enrollments on this page match' : 'No enrollments yet'} description={enrollments.data.totalElements ? 'Try another search, status or page.' : 'Create an enrollment from an active student and active course.'} /> : (
           <ResourceTable caption="Enrollment directory" columns={columns} rows={filtered} getRowKey={(enrollment) => enrollment.enrollmentId} actions={(enrollment) => <Button size="sm" variant="ghost" title="View enrollment details" aria-label={`View enrollment ${enrollment.enrollmentId}`} onClick={() => setViewing(enrollment)}><Eye size={16} /></Button>} />
         )}
+        {!enrollments.isPending && !enrollments.isError && enrollments.data && <PaginationControls page={enrollments.data.page} size={enrollments.data.size} totalElements={enrollments.data.totalElements} totalPages={enrollments.data.totalPages} onPageChange={setPage} />}
       </Card>
       {(students.isError || courses.isError) && <ErrorState error={students.error ?? courses.error} onRetry={() => { void students.refetch(); void courses.refetch() }} />}
       <EnrollmentFormDialog open={formOpen} onOpenChange={setFormOpen} students={(students.data ?? []).filter((student) => student.status === 'ACTIVE')} courses={(courses.data ?? []).filter((course) => course.status === 'ACTIVE')} onSubmit={save} />

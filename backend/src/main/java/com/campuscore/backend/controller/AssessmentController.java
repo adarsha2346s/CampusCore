@@ -1,10 +1,13 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.AssessmentResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.Assessment;
 import com.campuscore.backend.service.AssessmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -24,7 +27,15 @@ public class AssessmentController {
     // GET ALL ASSESSMENTS
     // =========================
     @GetMapping
-    public ResponseEntity<List<AssessmentResponse>> getAllAssessments() {
+    public ResponseEntity<?> getAllAssessments(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "assessmentId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    assessmentService.getAssessmentsPage(pageable), this::toResponse));
+        }
 
         List<AssessmentResponse> response =
                 assessmentService.getAllAssessments()
@@ -53,8 +64,16 @@ public class AssessmentController {
     // GET ASSESSMENTS BY COURSE
     // =========================
     @GetMapping("/course/{courseId}")
-    public ResponseEntity<List<AssessmentResponse>> getAssessmentsByCourse(
-            @PathVariable Long courseId) {
+    public ResponseEntity<?> getAssessmentsByCourse(
+            @PathVariable Long courseId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optional(page, size, "assessmentId");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    assessmentService.getAssessmentsByCoursePage(courseId, pageable), this::toResponse));
+        }
 
         List<AssessmentResponse> response =
                 assessmentService.getAssessmentsByCourse(courseId)

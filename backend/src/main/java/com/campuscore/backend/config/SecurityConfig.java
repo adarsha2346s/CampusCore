@@ -1,8 +1,10 @@
 package com.campuscore.backend.config;
 
 import com.campuscore.backend.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -49,9 +51,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:${CORS_ALLOWED_ORIGINS:http://localhost:5173}}") String configuredOrigins) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of(configuredOrigins.split(","))
+                .stream().map(String::trim).filter(origin -> !origin.isEmpty()).toList());
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
         );
@@ -79,6 +83,8 @@ public class SecurityConfig {
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling.authenticationEntryPoint(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                        ).accessDeniedHandler((request, response, exception) ->
+                                response.setStatus(HttpStatus.FORBIDDEN.value())
                         )
                 )
 
@@ -89,6 +95,12 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        // Allow Spring MVC error dispatches to preserve the
+                        // original API error status (for example, invalid
+                        // pagination returning 400).
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
 
                         // =========================
                         // PUBLIC LOGIN; CURRENT USER REQUIRES AUTHENTICATION
@@ -141,6 +153,12 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/v1/students/me"
+                        )
+                        .hasRole("STUDENT")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/v1/students/**"
                         )
                         .hasAnyRole("ADMIN", "FACULTY", "STUDENT")
@@ -164,11 +182,11 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
-                        // GPA remains available to authenticated application
-                        // roles; the controller scopes student requests to
-                        // their own enrollment.
+                        // GPA is available to administrators and students.
+                        // Student requests are scoped to their own enrollment
+                        // by GpaController.
                         .requestMatchers("/api/v1/gpa/**")
-                        .authenticated()
+                        .hasAnyRole("ADMIN", "STUDENT")
 
                         // =========================
                         // FACULTY MANAGEMENT
@@ -180,6 +198,12 @@ public class SecurityConfig {
                                 "/api/v1/faculty"
                         )
                         .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/faculty/me"
+                        )
+                        .hasRole("FACULTY")
 
                         // Faculty creation → ADMIN only
                         .requestMatchers(
@@ -266,9 +290,15 @@ public class SecurityConfig {
                         // ENROLLMENT MANAGEMENT
                         // =========================
 
-                        // Current enrollment endpoints expose
-                        // arbitrary enrollment records.
-                        // Keep them ADMIN-only for now.
+                        // Students can list only their own enrollments through
+                        // the self-service endpoint. Arbitrary enrollment
+                        // records remain ADMIN-only.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/enrollments/me"
+                        )
+                        .hasRole("STUDENT")
+
                         .requestMatchers(
                                 "/api/v1/enrollments",
                                 "/api/v1/enrollments/**"

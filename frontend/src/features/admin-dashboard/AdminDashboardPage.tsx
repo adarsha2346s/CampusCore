@@ -5,11 +5,11 @@ import { ErrorState } from '../../components/data-display/ErrorState'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { getUsers, userKeys } from '../users/users.api'
-import { getStudents, studentKeys } from '../students/students.api'
-import { getFaculty, facultyKeys } from '../faculty/faculty.api'
+import { getUsersPage, userKeys } from '../users/users.api'
+import { getStudentsPage, studentKeys } from '../students/students.api'
+import { getFacultyPage, facultyKeys } from '../faculty/faculty.api'
 import { getDepartments, departmentKeys } from '../departments/departments.api'
-import { getCourses, courseKeys } from '../courses/courses.api'
+import { getCoursesPage, courseKeys } from '../courses/courses.api'
 
 const quickLinks = [
   { label: 'Manage students', to: '/admin/students', description: 'Review student profiles', icon: GraduationCap },
@@ -19,11 +19,11 @@ const quickLinks = [
 ]
 
 export function AdminDashboardPage() {
-  const usersQuery = useQuery({ queryKey: userKeys.all, queryFn: getUsers })
-  const studentsQuery = useQuery({ queryKey: studentKeys.all, queryFn: getStudents })
-  const facultyQuery = useQuery({ queryKey: facultyKeys.all, queryFn: getFaculty })
+  const usersQuery = useQuery({ queryKey: userKeys.page(0, 1), queryFn: () => getUsersPage(0, 1) })
+  const studentsQuery = useQuery({ queryKey: studentKeys.page(0, 1), queryFn: () => getStudentsPage(0, 1) })
+  const facultyQuery = useQuery({ queryKey: facultyKeys.page(0, 1), queryFn: () => getFacultyPage(0, 1) })
   const departmentsQuery = useQuery({ queryKey: departmentKeys.all, queryFn: getDepartments })
-  const coursesQuery = useQuery({ queryKey: courseKeys.all, queryFn: getCourses })
+  const coursesQuery = useQuery({ queryKey: courseKeys.page(0, 1), queryFn: () => getCoursesPage(0, 1) })
   const overviewQueries = [usersQuery, studentsQuery, facultyQuery, departmentsQuery, coursesQuery]
 
   if (overviewQueries.some((query) => query.isPending)) return (
@@ -39,18 +39,18 @@ export function AdminDashboardPage() {
 
   // Query state above guarantees each successful query has resolved. The
   // fallback only satisfies TypeScript; it does not replace failed data.
-  const users = usersQuery.data ?? []
-  const students = studentsQuery.data ?? []
-  const faculty = facultyQuery.data ?? []
+  const users = usersQuery.data!
+  const students = studentsQuery.data!
+  const faculty = facultyQuery.data!
   const departments = departmentsQuery.data ?? []
-  const courses = coursesQuery.data ?? []
-  const hasRecords = users.length + students.length + faculty.length + departments.length + courses.length > 0
+  const courses = coursesQuery.data!
+  const hasRecords = users.totalElements + students.totalElements + faculty.totalElements + departments.length + courses.totalElements > 0
   const metrics = [
-    { label: 'Total users', value: users.length, detail: `${users.filter((user) => user.active).length} active accounts`, icon: Users, tone: 'blue' },
-    { label: 'Students', value: students.length, detail: `${students.filter((student) => student.status === 'ACTIVE').length} active profiles`, icon: GraduationCap, tone: 'teal' },
-    { label: 'Faculty', value: faculty.length, detail: `${faculty.filter((member) => member.status === 'ACTIVE').length} active profiles`, icon: UserRound, tone: 'violet' },
+    { label: 'Total users', value: users.totalElements, detail: 'Accounts in directory', icon: Users, tone: 'blue' },
+    { label: 'Students', value: students.totalElements, detail: 'Profiles in directory', icon: GraduationCap, tone: 'teal' },
+    { label: 'Faculty', value: faculty.totalElements, detail: 'Profiles in directory', icon: UserRound, tone: 'violet' },
     { label: 'Departments', value: departments.length, detail: 'Academic units', icon: Building2, tone: 'amber' },
-    { label: 'Courses', value: courses.length, detail: `${courses.filter((course) => course.status === 'ACTIVE').length} active offerings`, icon: BookOpen, tone: 'green' },
+    { label: 'Courses', value: courses.totalElements, detail: 'Catalog offerings', icon: BookOpen, tone: 'green' },
   ] as const
 
   return (
@@ -76,12 +76,12 @@ export function AdminDashboardPage() {
             <span className="overview-summary__mark"><Layers3 size={19} aria-hidden="true" /></span>
           </div>
           <div className="summary-list">
-            <SummaryRow label="Active user accounts" value={users.filter((user) => user.active).length} total={users.length} />
-            <SummaryRow label="Active student profiles" value={students.filter((student) => student.status === 'ACTIVE').length} total={students.length} />
-            <SummaryRow label="Active faculty profiles" value={faculty.filter((member) => member.status === 'ACTIVE').length} total={faculty.length} />
-            <SummaryRow label="Active courses" value={courses.filter((course) => course.status === 'ACTIVE').length} total={courses.length} />
+            <SummaryRow label="User accounts" value={users.totalElements} total={users.totalElements} />
+            <SummaryRow label="Student profiles" value={students.totalElements} total={students.totalElements} />
+            <SummaryRow label="Faculty profiles" value={faculty.totalElements} total={faculty.totalElements} />
+            <SummaryRow label="Course offerings" value={courses.totalElements} total={courses.totalElements} />
           </div>
-          <p className="muted overview-summary__note">Counts are composed from the existing admin list APIs. The backend does not provide a dedicated admin dashboard feed.</p>
+          <p className="muted overview-summary__note">Directory totals come from paginated API metadata. The backend does not provide a dedicated admin dashboard feed.</p>
         </Card>
 
         <Card className="quick-links-card">

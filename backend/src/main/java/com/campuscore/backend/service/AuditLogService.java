@@ -5,6 +5,8 @@ import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.AuditLogRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -58,10 +60,18 @@ public class AuditLogService {
                 .findAllByOrderByCreatedAtDesc();
     }
 
+    public Page<AuditLog> getLogsPage(Pageable pageable) {
+        return auditLogRepository.findAllBy(pageable);
+    }
+
     // Get audit logs for a specific user
     public List<AuditLog> getLogsByUser(Long userId) {
         return auditLogRepository
                 .findByUserUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public Page<AuditLog> getLogsByUserPage(Long userId, Pageable pageable) {
+        return auditLogRepository.findByUserUserId(userId, pageable);
     }
 
     // Get audit logs for a specific entity
@@ -72,11 +82,19 @@ public class AuditLogService {
                 .findByEntityNameOrderByCreatedAtDesc(entityName);
     }
 
+    public Page<AuditLog> getLogsByEntityPage(String entityName, Pageable pageable) {
+        return auditLogRepository.findByEntityName(entityName, pageable);
+    }
+
     // Get audit logs by action
     public List<AuditLog> getLogsByAction(
             String action) {
 
         return auditLogRepository
                 .findByActionOrderByCreatedAtDesc(action);
+    }
+
+    public Page<AuditLog> getLogsByActionPage(String action, Pageable pageable) {
+        return auditLogRepository.findByAction(action, pageable);
     }
 }

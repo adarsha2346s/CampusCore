@@ -3,7 +3,7 @@
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #1c2738; background: #f4f6fa; font-synthesis: none; text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-  --color-ink: #1c2738; --color-ink-soft: #556277; --color-muted: #788397; --color-subtle: #a7afbd;
+  --color-ink: #1c2738; --color-ink-soft: #556277; --color-muted: #66758a; --color-subtle: #a7afbd;
   --color-canvas: #f4f6fa; --color-surface: #fff; --color-surface-muted: #f8f9fc;
   --color-border: #e6eaf0; --color-border-strong: #d9dfe8; --color-primary: #3157a4;
   --color-primary-hover: #27498e; --color-primary-soft: #edf2fb; --color-teal: #27877e;

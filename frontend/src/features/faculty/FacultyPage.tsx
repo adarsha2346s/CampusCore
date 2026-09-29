@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
 import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
+import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -17,12 +18,14 @@ import { notifyError } from '../admin-shared/feedback'
 import { departmentKeys, getDepartments } from '../departments/departments.api'
 import { getUsers, userKeys } from '../users/users.api'
 import { FacultyFormDialog } from './FacultyFormDialog'
-import { createFaculty, facultyKeys, getFaculty } from './faculty.api'
+import { createFaculty, facultyKeys, getFacultyPage } from './faculty.api'
 import type { FacultyResponse } from '../../types/api'
 
 export function FacultyPage() {
   const client = useQueryClient()
-  const faculty = useQuery({ queryKey: facultyKeys.all, queryFn: getFaculty })
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+  const faculty = useQuery({ queryKey: facultyKeys.page(page, pageSize), queryFn: () => getFacultyPage(page, pageSize) })
   const users = useQuery({ queryKey: userKeys.all, queryFn: getUsers })
   const departments = useQuery({ queryKey: departmentKeys.all, queryFn: getDepartments })
   const [search, setSearch] = useState('')
@@ -32,11 +35,11 @@ export function FacultyPage() {
   const [viewing, setViewing] = useState<FacultyResponse | null>(null)
 
   const create = useMutation({ mutationFn: createFaculty, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['admin'] }); setFormOpen(false); toast.success('Faculty profile created') } })
-  const linkedUsers = new Set((faculty.data ?? []).map((member) => member.userId))
+  const linkedUsers = new Set((faculty.data?.content ?? []).map((member) => member.userId))
   const availableUsers = (users.data ?? []).filter((user) => user.role === 'FACULTY' && user.active && !linkedUsers.has(user.userId))
   const userById = useMemo(() => new Map((users.data ?? []).map((user) => [user.userId, user])), [users.data])
   const departmentById = new Map((departments.data ?? []).map((department) => [department.departmentId, department]))
-  const filtered = useMemo(() => (faculty.data ?? []).filter((member) => {
+  const filtered = useMemo(() => (faculty.data?.content ?? []).filter((member) => {
     const user = userById.get(member.userId)
     const matchSearch = `${member.firstName} ${member.lastName ?? ''} ${member.employeeNumber} ${user?.username ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())
     return matchSearch && (status === 'ALL' || member.status === status) && (departmentId === 'ALL' || String(member.departmentId) === departmentId)
@@ -59,12 +62,13 @@ export function FacultyPage() {
       <PageHeader eyebrow="Academic directory" title="Faculty" description="Browse faculty profiles and create profiles for existing faculty accounts." action={<Button onClick={() => setFormOpen(true)} disabled={users.isError || users.isPending || departments.isError || departments.isPending || departments.data?.length === 0 || availableUsers.length === 0}><Plus size={17} aria-hidden="true" /> Add faculty</Button>} />
       {(users.isError || departments.isError) && <ErrorState error={users.error ?? departments.error} onRetry={() => { void users.refetch(); void departments.refetch() }} />}
       <Card className="directory-card">
-        <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search faculty" countLabel={`${filtered.length} of ${faculty.data?.length ?? 0} faculty`} filters={(
-          <><SelectField label="Status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
+        <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${faculty.data?.totalElements ?? 0} total`} filters={(
+          <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {faculty.isPending ? <LoadingState label="Loading faculty records" /> : faculty.isError ? <ErrorState error={faculty.error} onRetry={() => void faculty.refetch()} /> : filtered.length === 0 ? <EmptyState title={faculty.data.length === 0 ? 'No faculty profiles yet' : 'No faculty match these filters'} description={faculty.data.length === 0 ? 'Create an active FACULTY user account, then add a faculty profile.' : 'Try another search or filter.'} /> : (
+        {faculty.isPending ? <LoadingState label="Loading faculty records" /> : faculty.isError ? <ErrorState error={faculty.error} onRetry={() => void faculty.refetch()} /> : filtered.length === 0 ? <EmptyState title={faculty.data.totalElements === 0 ? 'No faculty profiles yet' : 'No faculty on this page match these filters'} description={faculty.data.totalElements === 0 ? 'Create an active FACULTY user account, then add a faculty profile.' : 'Try another search, filter or page.'} /> : (
           <ResourceTable caption="Faculty directory" columns={columns} rows={filtered} getRowKey={(member) => member.facultyId} actions={(member) => <Button size="sm" variant="ghost" aria-label={`View ${member.firstName} ${member.lastName ?? ''}`} title="View faculty details" onClick={() => setViewing(member)}><Eye size={16} /></Button>} />
         )}
+        {!faculty.isPending && !faculty.isError && faculty.data && <PaginationControls page={faculty.data.page} size={faculty.data.size} totalElements={faculty.data.totalElements} totalPages={faculty.data.totalPages} onPageChange={setPage} />}
       </Card>
       <FacultyFormDialog open={formOpen} onOpenChange={setFormOpen} users={availableUsers} departments={departments.data ?? []} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`${viewing.firstName} ${viewing.lastName ?? ''}`} description="Faculty profile details" fields={[

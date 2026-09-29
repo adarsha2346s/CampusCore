@@ -1,9 +1,12 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.AuditLogResponse;
+import com.campuscore.backend.dto.PageResponse;
+import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.AuditLog;
 import com.campuscore.backend.service.AuditLogService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +25,14 @@ public class AuditLogController {
     // GET ALL AUDIT LOGS
     // =========================
     @GetMapping
-    public ResponseEntity<List<AuditLogResponse>> getAllLogs() {
+    public ResponseEntity<?> getAllLogs(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optionalNewest(page, size, "createdAt");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(auditLogService.getLogsPage(pageable), this::toResponse));
+        }
 
         List<AuditLogResponse> response =
                 auditLogService.getAllLogs()
@@ -37,8 +47,16 @@ public class AuditLogController {
     // GET LOGS BY USER
     // =========================
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<AuditLogResponse>> getLogsByUser(
-            @PathVariable Long userId) {
+    public ResponseEntity<?> getLogsByUser(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optionalNewest(page, size, "createdAt");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    auditLogService.getLogsByUserPage(userId, pageable), this::toResponse));
+        }
 
         List<AuditLogResponse> response =
                 auditLogService.getLogsByUser(userId)
@@ -53,8 +71,16 @@ public class AuditLogController {
     // GET LOGS BY ENTITY
     // =========================
     @GetMapping("/entity/{entityName}")
-    public ResponseEntity<List<AuditLogResponse>> getLogsByEntity(
-            @PathVariable String entityName) {
+    public ResponseEntity<?> getLogsByEntity(
+            @PathVariable String entityName,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optionalNewest(page, size, "createdAt");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    auditLogService.getLogsByEntityPage(entityName, pageable), this::toResponse));
+        }
 
         List<AuditLogResponse> response =
                 auditLogService.getLogsByEntity(entityName)
@@ -69,8 +95,16 @@ public class AuditLogController {
     // GET LOGS BY ACTION
     // =========================
     @GetMapping("/action/{action}")
-    public ResponseEntity<List<AuditLogResponse>> getLogsByAction(
-            @PathVariable String action) {
+    public ResponseEntity<?> getLogsByAction(
+            @PathVariable String action,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+
+        Pageable pageable = PageParameters.optionalNewest(page, size, "createdAt");
+        if (pageable != null) {
+            return ResponseEntity.ok(PageResponse.from(
+                    auditLogService.getLogsByActionPage(action, pageable), this::toResponse));
+        }
 
         List<AuditLogResponse> response =
                 auditLogService.getLogsByAction(action)

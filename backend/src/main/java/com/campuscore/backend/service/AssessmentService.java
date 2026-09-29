@@ -5,6 +5,8 @@ import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,6 +29,10 @@ public class AssessmentService {
         return assessmentRepository.findAll();
     }
 
+    public Page<Assessment> getAssessmentsPage(Pageable pageable) {
+        return assessmentRepository.findAll(pageable);
+    }
+
     public Assessment getAssessmentById(Long id) {
         return assessmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Assessment not found"));
@@ -34,6 +40,10 @@ public class AssessmentService {
 
     public List<Assessment> getAssessmentsByCourse(Long courseId) {
         return assessmentRepository.findByCourseCourseId(courseId);
+    }
+
+    public Page<Assessment> getAssessmentsByCoursePage(Long courseId, Pageable pageable) {
+        return assessmentRepository.findByCourseCourseId(courseId, pageable);
     }
 
     public Assessment createAssessment(

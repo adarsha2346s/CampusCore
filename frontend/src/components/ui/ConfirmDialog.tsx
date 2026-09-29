@@ -1,6 +1,17 @@
 import { useState } from 'react'
+import { ApiError } from '../../lib/api/api-error'
 import { Button } from './Button'
 import { Dialog } from './Dialog'
+
+const fallbackError = 'The change could not be completed. Please try again.'
+const sensitiveOrInternalDetail = /\b(?:password|passwd|credential|authorization|bearer|token|jwt|secret|api[\s_-]?key|private\s+key|exception|stack\s+trace|traceback)\b|-----BEGIN|\beyJ[A-Za-z0-9_-]{8,}\.|\b(?:SQLSTATE|SQLException|SQL syntax|jdbc:|hibernate|org\.springframework|com\.campuscore|java\.)|(?:^|\n)\s*at\s+[\w.$]+/i
+
+function getSafeErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) return fallbackError
+  const message = error.message.trim()
+  if (!message || message.length > 240 || sensitiveOrInternalDetail.test(message)) return fallbackError
+  return message
+}
 
 interface ConfirmDialogProps {
   title: string
@@ -22,8 +33,8 @@ export function ConfirmDialog({ title, description, confirmLabel, onConfirm, tri
     try {
       await onConfirm()
       setOpen(false)
-    } catch {
-      setError('The change could not be completed. Please try again.')
+    } catch (caughtError) {
+      setError(getSafeErrorMessage(caughtError))
     } finally {
       setBusy(false)
     }
