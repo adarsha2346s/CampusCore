@@ -338,6 +338,16 @@
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* On dark surfaces the base primary only reaches ~4.4:1 against the tinted
+   pill, so use the lighter primary already defined for dark mode. */
+:root[data-theme='dark'] .page-header__eyebrow {
+  color: var(--pr2);
+}
+
+:root[data-theme='dark'] .page-header__eyebrow::before {
+  background: var(--pr2);
+}
+
 .page-header__description {
   max-width: 680px;
   margin: 14px 0 0;

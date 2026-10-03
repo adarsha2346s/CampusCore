@@ -7,6 +7,7 @@ import { Brand } from '../components/navigation/Brand'
 import { RoleNavigation } from '../components/navigation/RoleNavigation'
 import { RoleSwitcher } from '../components/navigation/RoleSwitcher'
 import { FieldCanvas } from '../components/charts/FieldCanvas'
+import { LegalLinks } from '../components/legal/LegalLinks'
 import type { Role } from '../types/api'
 
 const roleLabel: Record<Role, string> = {
@@ -107,6 +108,9 @@ export function RoleLayout({ role }: { role: Role }) {
             </button>
             <button type="button" className="sidebar__link" onClick={signOut}>Sign out</button>
           </div>
+          <nav className="sidebar__legal" aria-label="Legal documents">
+            <LegalLinks variant="sidebar" />
+          </nav>
         </div>
       </aside>
 

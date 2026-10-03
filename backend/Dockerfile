@@ -24,5 +24,7 @@ COPY --from=build --chown=campuscore:campuscore /workspace/target/*.jar /app/app
 USER campuscore
 EXPOSE 8080
 
-# Size the heap from the container memory limit instead of host memory.
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+# Size the heap from the container memory limit instead of host memory. 60% is
+# used so metaspace, code cache and thread stacks still fit inside the 512 MB
+# free-tier container; raise it on larger instances.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]

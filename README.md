@@ -4,7 +4,11 @@ CampusCore is a university operations application that brings campus accounts an
 
 ## Demo
 
-There is no hosted demo at this time. Run the local stack using Docker Compose (see [Local setup](#local-setup)). The application uses the configured MySQL data and does not ship with seeded accounts or fabricated academic records.
+Live demo: <https://campus-core-three.vercel.app>
+
+The public frontend is deployed to Vercel, the Spring Boot API runs as a Docker service on Render, and the database is a Layerbase MariaDB instance. The demo environment is a separate deployment from local development and uses synthetic demonstration identities and academic records rather than real personal data, as noted under [Screenshots](#screenshots).
+
+To run the same stack on your own machine instead, use Docker Compose (see [Local setup](#local-setup)).
 
 ## Screenshots
 
@@ -12,13 +16,12 @@ These browser screenshots use synthetic demo identities and records. They are de
 
 | View | Screenshot |
 | --- | --- |
-| Login | ![CampusCore login](docs/screenshots/login.png) |
-| Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/admin-dashboard.png) |
-| Student profile | ![Student profile with synthetic demo identity](docs/screenshots/student-directory.png) |
-| Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/course-catalog.png) |
-| Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/student-workspace.png) |
-| Faculty workspace | ![Faculty workspace with synthetic demo identity](docs/screenshots/faculty-workspace.png) |
-| Access management | ![User accounts with role and status filters](docs/screenshots/users.png) |
+| Login | ![CampusCore login](docs/screenshots/Login.png) |
+| Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/Admin%20Dashboard.png) |
+| Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/Course%20Catalog.png) |
+| Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/Student%20Dashboard.png) |
+| Faculty workspace | ![Faculty workspace with synthetic demo identity](docs/screenshots/Faculty%20Dashboard.png) |
+| Access management | ![User accounts with role and status filters](docs/screenshots/Users.png) |
 
 Do not capture real personal records, credentials, or tokens.
 
@@ -29,27 +32,40 @@ Do not capture real personal records, credentials, or tokens.
 - **STUDENT:** authenticated self profile, personal dashboard, own enrollment list, own enrollment GPA lookup, and the course catalog.
 - Responsive role workspaces with form validation, search/filtering on loaded lists, detail dialogs, and loading, empty, error, and mutation feedback states.
 
+## Legal pages
+
+Two public pages render without signing in:
+
+- **Privacy Policy** — `/privacy`
+- **Terms & Conditions** — `/terms`
+
+Both are reachable from the sign-in card, the authenticated sidebar, and the public footer. They are static React routes served through the same SPA rewrite as the rest of the application, so they resolve directly by URL without a session.
+
 ## Architecture
 
 ```text
-React + TypeScript + Vite
-          │ JSON over HTTP + Bearer JWT
-          ▼
-Spring Boot REST controllers and services
-          │ Spring Security and JWT checks
-          ▼
-Spring Data JPA ───────────────► MySQL
+Browser
+  │ static React bundle from Vercel
+  │ SPA rewrite sends all routes to index.html
+  │ JSON over HTTPS + Bearer JWT
+  ▼
+Spring Boot REST controllers and services on Render (Docker)
+  │ Spring Security and JWT checks
+  ▼
+Spring Data JPA ───────────────► MariaDB on Layerbase
 ```
 
-The browser keeps the JWT in memory and sends it in the `Authorization` header. The Spring Boot API validates authentication and roles, applies ownership checks for student self-service, and uses JPA repositories to access MySQL. Logout clears the client session; a page reload requires signing in again because there is no refresh-token endpoint.
+The browser keeps the JWT in memory and sends it in the `Authorization` header. The Spring Boot API validates authentication and roles, applies ownership checks for student self-service, and uses JPA repositories to access MariaDB over the MySQL protocol. Logout clears the client session; a page reload requires signing in again because there is no refresh-token endpoint.
+
+In production the three tiers are hosted separately: Vercel builds and serves the frontend, Render runs the backend as a single Docker service, and Layerbase provides the managed MariaDB instance. CORS is configured on the backend for the deployed frontend origin.
 
 ## Technology stack
 
 - **Frontend:** React 19, TypeScript, Vite, React Router, TanStack React Query, React Hook Form, Zod, Radix UI, Lucide, Sonner.
 - **Backend:** Java 25, Spring Boot 4.1.1, Spring MVC, Spring Security, Spring Data JPA, Bean Validation, JJWT, BCrypt.
-- **Database:** MySQL 8 compatible schema; `backend/database/schema.sql` defines the tables and relationships.
+- **Database:** MySQL-compatible schema; `backend/database/schema.sql` defines the tables and relationships. Local development and CI run MySQL, and production runs MariaDB on Layerbase through the MySQL connector.
 - **CI:** GitHub Actions runs Maven verification and frontend lint/build on pushes and pull requests.
-- **Deployment configuration:** Vercel-compatible frontend routing, Render-compatible backend Docker service, and local Docker Compose. No deployment has been performed.
+- **Deployment:** the frontend is deployed to Vercel, the backend runs on Render as a Docker service described by `render.yaml`, and the database is a managed Layerbase MariaDB instance. `frontend/vercel.json` provides the SPA rewrite. Docker Compose remains available for local runs.
 
 ## Security
 
@@ -113,7 +129,7 @@ The `frontend` image compiles the application at build time and serves the stati
 
 | Variable | Used by | Purpose |
 | --- | --- | --- |
-| `DB_URL` | Backend / Compose / deployment | JDBC URL for MySQL |
+| `DB_URL` | Backend / Compose / deployment | JDBC URL for the MySQL-compatible database: MySQL locally, MariaDB in production |
 | `DB_USERNAME`, `DB_PASSWORD` | Backend / Compose / deployment | Database account |
 | `JWT_SECRET` | Backend / deployment | Private JWT signing secret (at least 32 bytes) |
 | `JWT_EXPIRATION` | Backend | Token lifetime in milliseconds; defaults to 24 hours |
@@ -143,10 +159,13 @@ npm run build
 
 GitHub Actions uses Java 25 and Node 24 and provisions a temporary MySQL service for backend tests. The frontend project does not currently include automated browser/E2E tests.
 
+Production verification has been completed against the deployed stack. The Vercel frontend loads and boots without console errors, its SPA rewrite resolves application routes directly by URL, and it is configured to call the Render API at `https://campuscore-api-32qm.onrender.com/api/v1`, which serves the API over HTTPS and rejects invalid credentials correctly. The Render service is on a free plan, so the first request after an idle period can take around half a minute while the instance starts.
+
 ## Known limitations
 
 - No faculty-course assignment relationship or faculty teaching operations.
-- No hosted demo, production deployment, seeded demonstration account, or browser/E2E test suite is included.
+- No demo account credentials are published in this README; access to the hosted demo requires credentials from the project operator.
+- The frontend project does not include an automated browser/E2E test suite.
 - JWT sessions are memory-only and require login after reload; no refresh-token endpoint exists.
 
 ## Roadmap
@@ -154,5 +173,3 @@ GitHub Actions uses Java 25 and Node 24 and provisions a temporary MySQL service
 1. Extend server-side filtering to collection workflows where campus usage requires it.
 2. Model faculty-course assignments and add ownership-scoped teaching workflows if the institution's requirements support them.
 3. Add automated API/security and browser-level regression tests.
-4. Provision a hosted MySQL-compatible database and deploy the API and frontend with environment-specific CORS and secrets.
-5. Capture synthetic or approved non-sensitive screenshots for the public project page.

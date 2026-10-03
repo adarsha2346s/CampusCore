@@ -5,9 +5,12 @@ import { RequireAuth, RequireRole } from './route-guards'
 import { roleHome } from '../lib/role-home'
 import { ForbiddenPage, NotFoundPage } from './SystemPages'
 import { AuthLayout } from '../layouts/AuthLayout'
+import { PublicLayout } from '../layouts/PublicLayout'
 import { useAuth } from '../features/auth/auth-context'
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((module) => ({ default: module.LoginPage })))
+const PrivacyPolicyPage = lazy(() => import('../features/legal/PrivacyPolicy').then((module) => ({ default: module.PrivacyPolicyPage })))
+const TermsConditionsPage = lazy(() => import('../features/legal/TermsConditions').then((module) => ({ default: module.TermsConditionsPage })))
 const AdminLayout = lazy(() => import('../layouts/AdminLayout').then((module) => ({ default: module.AdminLayout })))
 const FacultyLayout = lazy(() => import('../layouts/FacultyLayout').then((module) => ({ default: module.FacultyLayout })))
 const StudentLayout = lazy(() => import('../layouts/StudentLayout').then((module) => ({ default: module.StudentLayout })))
@@ -41,6 +44,15 @@ export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
     children: [{ path: '/login', element: <LoginPage /> }],
+  },
+  {
+    // Public legal documents: reachable without authentication and outside the
+    // role guards, so they cannot affect protected routing.
+    element: <PublicLayout />,
+    children: [
+      { path: '/privacy', element: <PrivacyPolicyPage /> },
+      { path: '/terms', element: <TermsConditionsPage /> },
+    ],
   },
   { path: '/', element: <HomeRedirect /> },
   { path: '/forbidden', element: <ForbiddenPage /> },

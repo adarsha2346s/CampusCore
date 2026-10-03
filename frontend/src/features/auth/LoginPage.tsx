@@ -9,6 +9,7 @@ import { ApiError } from '../../lib/api/api-error'
 import { roleHome } from '../../lib/role-home'
 import { Button } from '../../components/ui/Button'
 import { InputField } from '../../components/ui/InputField'
+import { LegalLinks } from '../../components/legal/LegalLinks'
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, 'Enter your username.'),
@@ -93,6 +94,10 @@ export function LoginPage() {
       </form>
       <div className="login-card__note">
         <span>Need access?</span> Contact your campus administrator.
+      </div>
+      <div className="login-card__legal">
+        <span>By signing in you accept the</span>
+        <LegalLinks />
       </div>
       <Link className="sr-only" to="/forbidden">Access information</Link>
     </div>

@@ -2,6 +2,10 @@ services:
   - type: web
     name: campuscore-api
     runtime: docker
+    # Free tier: single 512 MB instance. The JVM heap is sized in the Dockerfile
+    # to leave headroom inside that limit.
+    plan: free
+    numInstances: 1
     dockerContext: .
     dockerfilePath: ./backend/Dockerfile
     envVars:
