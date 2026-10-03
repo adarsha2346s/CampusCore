@@ -5,15 +5,16 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { notifyError } from '../admin-shared/feedback'
+import { formatDateTime } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { facultyKeys, getFaculty } from '../faculty/faculty.api'
 import { AttendanceSessionDetailsDialog } from './AttendanceSessionDetailsDialog'
@@ -51,7 +52,7 @@ export function AttendanceSessionsPage() {
   }
 
   const columns = [
-    { key: 'date', header: 'Session', render: (session: AttendanceSessionResponse) => <div className="identity-cell"><span className="entity-icon entity-icon--blue"><CalendarDays size={17} aria-hidden="true" /></span><span><strong>{session.sessionDate}</strong><small>{session.topic || 'No topic provided'}</small></span></div> },
+    { key: 'date', header: 'Session', render: (session: AttendanceSessionResponse) => <div className="identity-cell"><span className="entity-icon entity-icon--blue"><CalendarDays size={17} aria-hidden="true" /></span><span><strong>{formatDateTime(session.sessionDate) ?? '—'}</strong><small>{session.topic || 'No topic provided'}</small></span></div> },
     { key: 'course', header: 'Course', render: (session: AttendanceSessionResponse) => { const course = courseById.get(session.courseId); return course ? `${course.courseCode} · ${course.courseName}` : `Course #${session.courseId}` } },
     { key: 'faculty', header: 'Faculty', render: (session: AttendanceSessionResponse) => { const member = facultyById.get(session.facultyId); return member ? `${member.firstName} ${member.lastName ?? ''}` : `Faculty #${session.facultyId}` } },
   ]
@@ -67,7 +68,7 @@ export function AttendanceSessionsPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${sessions.data?.totalElements ?? 0} sessions total`} filters={(
           <><SelectField label="Course" value={courseId} onChange={(event) => { setCourseId(event.target.value); setPage(0) }}><option value="ALL">All courses</option>{courses.data?.map((course) => <option key={course.courseId} value={course.courseId}>{course.courseCode}</option>)}</SelectField><SelectField label="Faculty" value={facultyId} onChange={(event) => { setFacultyId(event.target.value); setPage(0) }}><option value="ALL">All faculty</option>{faculty.data?.map((member) => <option key={member.facultyId} value={member.facultyId}>{member.employeeNumber} · {member.firstName}</option>)}</SelectField></>
         )} />
-        {sessions.isPending ? <LoadingState label="Loading attendance sessions" /> : sessions.isError ? <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} /> : !filtered.length ? <EmptyState title={sessions.data.totalElements ? 'No sessions match this page search' : 'No attendance sessions yet'} description={sessions.data.totalElements ? 'Try another search phrase or use the page controls.' : 'Create a session for a course to begin taking attendance.'} /> : (
+        {sessions.isPending ? <TableSkeleton rows={8} columns={5} label="Loading attendance sessions" /> : sessions.isError ? <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} /> : !filtered.length ? <EmptyState title={sessions.data.totalElements ? 'No sessions match this page search' : 'No attendance sessions yet'} description={sessions.data.totalElements ? 'Try another search phrase or use the page controls.' : 'Create a session for a course to begin taking attendance.'} /> : (
           <ResourceTable caption="Attendance sessions" columns={columns} rows={filtered} getRowKey={(session) => session.attendanceSessionId} actions={(session) => <Button size="sm" variant="ghost" title="View session and records" aria-label={`View session ${session.attendanceSessionId}`} onClick={() => setViewing(session)}><Eye size={16} /></Button>} />
         )}
         {sessions.data && <PaginationControls page={sessions.data.page} size={sessions.data.size} totalElements={sessions.data.totalElements} totalPages={sessions.data.totalPages} onPageChange={setPage} />}

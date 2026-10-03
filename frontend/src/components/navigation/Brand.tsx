@@ -1,11 +1,10 @@
-import { Landmark } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand({ onCanvas = false, label = 'CampusCore home' }: { onCanvas?: boolean; label?: string }) {
   return (
-    <Link className={`brand${compact ? ' brand--compact' : ''}`} to="/" aria-label="CampusCore home">
-      <span className="brand__mark"><Landmark size={19} strokeWidth={2.2} aria-hidden="true" /></span>
-      {!compact && <span className="brand__name">Campus<span>Core</span></span>}
+    <Link className={`brand${onCanvas ? ' brand--on-canvas' : ''}`} to="/" aria-label={label}>
+      <span className="brand__mark" aria-hidden="true">C</span>
+      <span className="brand__name">CampusCore</span>
     </Link>
   )
 }

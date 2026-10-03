@@ -9,7 +9,7 @@ export function AppProviders({ children }: PropsWithChildren) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position="bottom-center" closeButton toastOptions={{ className: 'campuscore-toast' }} />
       </AuthProvider>
     </QueryClientProvider>
   )

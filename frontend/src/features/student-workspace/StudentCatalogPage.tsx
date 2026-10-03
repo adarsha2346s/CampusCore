@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import { Eye } from 'lucide-react'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
@@ -29,7 +29,7 @@ export function StudentCatalogPage() {
       <PageHeader eyebrow="Campus catalog" title="Course catalog" description="Browse course descriptions published in the campus catalog. Your personal enrollments are not available through this view." />
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search this page" countLabel={`${courses.data?.totalElements ?? 0} courses total`} />
-        {courses.isPending || departments.isPending ? <LoadingState label="Loading course catalog" />
+        {courses.isPending || departments.isPending ? <TableSkeleton rows={8} columns={3} label="Loading course catalog" />
           : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} />
             : departments.isError ? <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />
               : filtered.length === 0 ? <EmptyState title={courses.data.totalElements ? 'No courses match this page search' : 'No courses available'} description={courses.data.totalElements ? 'Try another search or use the page controls.' : 'The campus catalog has no courses to show yet.'} />

@@ -10,10 +10,12 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { notifyError } from '../admin-shared/feedback'
+import { formatDate } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { AssessmentFormDialog } from './AssessmentFormDialog'
 import { assessmentKeys, createAssessment, getAssessment, getAssessmentsPage, getAssessmentsByCoursePage } from './assessments.api'
@@ -48,7 +50,7 @@ export function AssessmentsPage() {
     { key: 'course', header: 'Course', render: (assessment: AssessmentResponse) => { const course = courseById.get(assessment.courseId); return course ? `${course.courseCode} · ${course.courseName}` : `Course #${assessment.courseId}` } },
     { key: 'max', header: 'Max marks', render: (assessment: AssessmentResponse) => assessment.maxMarks },
     { key: 'weight', header: 'Weight', render: (assessment: AssessmentResponse) => `${assessment.weight}%` },
-    { key: 'date', header: 'Date', mobileHidden: true, render: (assessment: AssessmentResponse) => assessment.assessmentDate || <span className="muted">Not set</span> },
+    { key: 'date', header: 'Date', mobileHidden: true, render: (assessment: AssessmentResponse) => formatDate(assessment.assessmentDate) ?? <span className="muted">Not set</span> },
   ]
 
   return (
@@ -58,7 +60,7 @@ export function AssessmentsPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${assessments.data?.totalElements ?? 0} total`} filters={(
           <><SelectField label="Course" value={courseId} onChange={(event) => { setCourseId(event.target.value); setPage(0) }}><option value="ALL">All courses</option>{courses.data?.map((course) => <option key={course.courseId} value={course.courseId}>{course.courseCode}</option>)}</SelectField><SelectField label="Type" value={type} onChange={(event) => { setType(event.target.value); setPage(0) }}><option value="ALL">All types</option><option value="QUIZ">Quiz</option><option value="ASSIGNMENT">Assignment</option><option value="MIDTERM">Midterm</option><option value="FINAL">Final</option><option value="PROJECT">Project</option></SelectField></>
         )} />
-        {assessments.isPending ? <LoadingState label="Loading assessments" /> : assessments.isError ? <ErrorState error={assessments.error} onRetry={() => void assessments.refetch()} /> : filtered.length === 0 ? <EmptyState title={assessments.data.totalElements ? 'No assessments on this page match' : 'No assessments yet'} description={assessments.data.totalElements ? 'Try another search, course, type or page.' : 'Add an assessment to a course to build its grading structure.'} /> : (
+        {assessments.isPending ? <TableSkeleton rows={8} columns={5} label="Loading assessments" /> : assessments.isError ? <ErrorState error={assessments.error} onRetry={() => void assessments.refetch()} /> : filtered.length === 0 ? <EmptyState title={assessments.data.totalElements ? 'No assessments on this page match' : 'No assessments yet'} description={assessments.data.totalElements ? 'Try another search, course, type or page.' : 'Add an assessment to a course to build its grading structure.'} /> : (
           <ResourceTable caption="Assessment directory" columns={columns} rows={filtered} getRowKey={(assessment) => assessment.assessmentId} actions={(assessment) => <Button size="sm" variant="ghost" title="View assessment details" aria-label={`View ${assessment.name}`} onClick={() => setViewing(assessment)}><Eye size={16} /></Button>} />
         )}
         {!assessments.isPending && !assessments.isError && assessments.data && <PaginationControls page={assessments.data.page} size={assessments.data.size} totalElements={assessments.data.totalElements} totalPages={assessments.data.totalPages} onPageChange={setPage} />}
@@ -69,7 +71,7 @@ export function AssessmentsPage() {
         { label: 'Assessment ID', value: detail.data?.assessmentId ?? viewing.assessmentId }, { label: 'Type', value: detail.data?.assessmentType ?? viewing.assessmentType },
         { label: 'Course', value: courseById.get(detail.data?.courseId ?? viewing.courseId)?.courseCode ?? `Course #${viewing.courseId}` },
         { label: 'Maximum marks', value: detail.data?.maxMarks ?? viewing.maxMarks }, { label: 'Weight', value: `${detail.data?.weight ?? viewing.weight}%` },
-        { label: 'Assessment date', value: detail.data?.assessmentDate ?? viewing.assessmentDate },
+        { label: 'Assessment date', value: formatDate(detail.data?.assessmentDate ?? viewing.assessmentDate) ?? 'Not set' },
       ]} />}
     </div>
   )

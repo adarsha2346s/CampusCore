@@ -10,10 +10,12 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { notifyError } from '../admin-shared/feedback'
+import { formatDateTime } from '../../lib/format/datetime'
 import { getAssessments } from '../assessments/assessments.api'
 import { getCourses } from '../courses/courses.api'
 import { getEnrollments } from '../enrollments/enrollments.api'
@@ -62,7 +64,7 @@ export function MarksPage() {
     { key: 'student', header: 'Student / enrollment', render: (mark: MarkResponse) => { const enrollment = enrollmentById.get(mark.enrollmentId); const student = enrollment ? studentById.get(enrollment.studentId) : undefined; return <div className="identity-cell"><span className="identity-avatar identity-avatar--teal" aria-hidden="true">{student?.firstName?.slice(0, 1) ?? '—'}</span><span><strong>{student?.enrollmentNumber ?? `Enrollment #${mark.enrollmentId}`}</strong><small>{student ? `${student.firstName} ${student.lastName ?? ''}` : `Enrollment #${mark.enrollmentId}`}</small></span></div> } },
     { key: 'assessment', header: 'Assessment', render: (mark: MarkResponse) => { const assessment = assessmentById.get(mark.assessmentId); return assessment ? `${assessment.name} · ${assessment.assessmentType}` : `Assessment #${mark.assessmentId}` } },
     { key: 'marks', header: 'Marks obtained', render: (mark: MarkResponse) => <strong className="mark-value">{mark.marksObtained}{assessmentById.get(mark.assessmentId) ? <small> / {assessmentById.get(mark.assessmentId)?.maxMarks}</small> : null}</strong> },
-    { key: 'entered', header: 'Entered at', mobileHidden: true, render: (mark: MarkResponse) => mark.enteredAt || <span className="muted">—</span> },
+    { key: 'entered', header: 'Entered at', mobileHidden: true, render: (mark: MarkResponse) => formatDateTime(mark.enteredAt) ?? <span className="muted">—</span> },
   ]
 
   const dependencyError = enrollments.error ?? assessments.error ?? students.error ?? courses.error
@@ -74,7 +76,7 @@ export function MarksPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${marks.data?.totalElements ?? 0} total`} filters={(
           <><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => { setEnrollmentId(event.target.value); setPage(0) }}><option value="ALL">All enrollments</option>{enrollments.data?.map((item) => <option key={item.enrollmentId} value={item.enrollmentId}>#{item.enrollmentId} · {studentById.get(item.studentId)?.enrollmentNumber ?? `Student #${item.studentId}`}</option>)}</SelectField><SelectField label="Assessment" value={assessmentId} onChange={(event) => { setAssessmentId(event.target.value); setPage(0) }}><option value="ALL">All assessments</option>{assessments.data?.map((item) => <option key={item.assessmentId} value={item.assessmentId}>{item.name}</option>)}</SelectField></>
         )} />
-        {marks.isPending ? <LoadingState label="Loading marks" /> : marks.isError ? <ErrorState error={marks.error} onRetry={() => void marks.refetch()} /> : filtered.length === 0 ? <EmptyState title={marks.data.totalElements ? 'No marks on this page match' : 'No marks recorded yet'} description={marks.data.totalElements ? 'Try another enrollment, assessment, search term or page.' : 'Record a mark after an enrollment and assessment exist.'} /> : (
+        {marks.isPending ? <TableSkeleton rows={8} columns={4} label="Loading marks" /> : marks.isError ? <ErrorState error={marks.error} onRetry={() => void marks.refetch()} /> : filtered.length === 0 ? <EmptyState title={marks.data.totalElements ? 'No marks on this page match' : 'No marks recorded yet'} description={marks.data.totalElements ? 'Try another enrollment, assessment, search term or page.' : 'Record a mark after an enrollment and assessment exist.'} /> : (
           <ResourceTable caption="Marks directory" columns={columns} rows={filtered} getRowKey={(mark) => mark.markId} actions={(mark) => <Button size="sm" variant="ghost" title="View mark details" aria-label={`View mark ${mark.markId}`} onClick={() => setViewing(mark)}><Eye size={16} /></Button>} />
         )}
         {!marks.isPending && !marks.isError && marks.data && <PaginationControls page={marks.data.page} size={marks.data.size} totalElements={marks.data.totalElements} totalPages={marks.data.totalPages} onPageChange={setPage} />}
@@ -84,7 +86,7 @@ export function MarksPage() {
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`Mark #${viewing.markId}`} description="Mark entry details" notice={detail.isPending ? <LoadingState label="Refreshing mark details" /> : detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : undefined} fields={[
         { label: 'Mark ID', value: detail.data?.markId ?? viewing.markId }, { label: 'Enrollment ID', value: detail.data?.enrollmentId ?? viewing.enrollmentId },
         { label: 'Assessment', value: assessmentById.get(detail.data?.assessmentId ?? viewing.assessmentId)?.name ?? `Assessment #${viewing.assessmentId}` },
-        { label: 'Marks obtained', value: detail.data?.marksObtained ?? viewing.marksObtained }, { label: 'Entered at', value: detail.data?.enteredAt ?? viewing.enteredAt },
+        { label: 'Marks obtained', value: detail.data?.marksObtained ?? viewing.marksObtained }, { label: 'Entered at', value: formatDateTime(detail.data?.enteredAt ?? viewing.enteredAt) ?? '—' },
       ]} />}
     </div>
   )

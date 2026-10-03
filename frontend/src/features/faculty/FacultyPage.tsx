@@ -4,12 +4,12 @@ import { Eye, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
@@ -65,7 +65,7 @@ export function FacultyPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${faculty.data?.totalElements ?? 0} total`} filters={(
           <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {faculty.isPending ? <LoadingState label="Loading faculty records" /> : faculty.isError ? <ErrorState error={faculty.error} onRetry={() => void faculty.refetch()} /> : filtered.length === 0 ? <EmptyState title={faculty.data.totalElements === 0 ? 'No faculty profiles yet' : 'No faculty on this page match these filters'} description={faculty.data.totalElements === 0 ? 'Create an active FACULTY user account, then add a faculty profile.' : 'Try another search, filter or page.'} /> : (
+        {faculty.isPending ? <TableSkeleton rows={8} columns={5} label="Loading faculty records" /> : faculty.isError ? <ErrorState error={faculty.error} onRetry={() => void faculty.refetch()} /> : filtered.length === 0 ? <EmptyState title={faculty.data.totalElements === 0 ? 'No faculty profiles yet' : 'No faculty on this page match these filters'} description={faculty.data.totalElements === 0 ? 'Create an active FACULTY user account, then add a faculty profile.' : 'Try another search, filter or page.'} /> : (
           <ResourceTable caption="Faculty directory" columns={columns} rows={filtered} getRowKey={(member) => member.facultyId} actions={(member) => <Button size="sm" variant="ghost" aria-label={`View ${member.firstName} ${member.lastName ?? ''}`} title="View faculty details" onClick={() => setViewing(member)}><Eye size={16} /></Button>} />
         )}
         {!faculty.isPending && !faculty.isError && faculty.data && <PaginationControls page={faculty.data.page} size={faculty.data.size} totalElements={faculty.data.totalElements} totalPages={faculty.data.totalPages} onPageChange={setPage} />}

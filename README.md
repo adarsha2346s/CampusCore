@@ -14,10 +14,11 @@ These browser screenshots use synthetic demo identities and records. They are de
 | --- | --- |
 | Login | ![CampusCore login](docs/screenshots/login.png) |
 | Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/admin-dashboard.png) |
-| Student directory | ![Student directory with synthetic demo records](docs/screenshots/student-directory.png) |
+| Student profile | ![Student profile with synthetic demo identity](docs/screenshots/student-directory.png) |
 | Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/course-catalog.png) |
 | Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/student-workspace.png) |
 | Faculty workspace | ![Faculty workspace with synthetic demo identity](docs/screenshots/faculty-workspace.png) |
+| Access management | ![User accounts with role and status filters](docs/screenshots/users.png) |
 
 Do not capture real personal records, credentials, or tokens.
 
@@ -97,7 +98,9 @@ Replace the placeholder database passwords and set a randomly generated JWT sign
 docker compose up --build
 ```
 
-The local frontend is available at `http://localhost:5173`, the API at `http://localhost:8080`, and MySQL at port `3306`. Compose initializes an empty named MySQL volume from the schema on first creation. It does not create application accounts. To discard this local database volume, use `docker compose down -v`; this deletes the Compose database data.
+The local frontend is available at `http://localhost:5173` and the API at `http://localhost:8080`. MySQL is not published to the host: the backend reaches it over the Compose network, so use `docker compose exec mysql mysql -ucampuscore -p"$DB_PASSWORD" campuscore` for database access. Compose initializes an empty named MySQL volume from the schema on first creation. It does not create application accounts. To discard this local database volume, use `docker compose down -v`; this deletes the Compose database data. A first run creates an empty database from the schema and, by design, no application accounts.
+
+The `frontend` image compiles the application at build time and serves the static bundle from nginx, which is also the production behaviour; `VITE_API_BASE_URL` is passed to that build, so changing it requires `docker compose build frontend`. The `backend` image builds the jar with Maven, runs as an unprivileged user, and starts with the `production` Spring profile.
 
 ### Run services separately
 
@@ -115,9 +118,11 @@ The local frontend is available at `http://localhost:5173`, the API at `http://l
 | `JWT_SECRET` | Backend / deployment | Private JWT signing secret (at least 32 bytes) |
 | `JWT_EXPIRATION` | Backend | Token lifetime in milliseconds; defaults to 24 hours |
 | `CORS_ALLOWED_ORIGINS` | Backend / deployment | Comma-separated allowed browser origins |
-| `VITE_API_BASE_URL` | Frontend | Public API root, e.g. `http://localhost:8080/api/v1` |
+| `VITE_API_BASE_URL` | Frontend build | Public API root, e.g. `http://localhost:8080/api/v1`. Vite inlines it while building, so it is a Docker build argument and not a runtime variable. It must be a public URL, never a secret. |
 
 Root `.env.example` contains placeholders for Compose only. `frontend/.env.example` contains the local API URL. Never use a real secret in either example file.
+
+For a hosted deployment set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` and `CORS_ALLOWED_ORIGINS` in the platform's secret store (Render, for example, uses the `sync: false` entries in `render.yaml`). The backend refuses to start when `JWT_SECRET` is missing or shorter than 32 bytes, and no credential is read from a committed file.
 
 ## Verification
 

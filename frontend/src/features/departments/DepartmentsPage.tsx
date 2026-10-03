@@ -4,10 +4,10 @@ import { Building2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -44,7 +44,7 @@ export function DepartmentsPage() {
       <PageHeader eyebrow="Academic structure" title="Departments" description="Organize academic units and maintain their department codes." action={<Button onClick={() => { setEditing(null); setFormOpen(true) }}><Plus size={17} aria-hidden="true" /> Add department</Button>} />
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search departments" countLabel={`${filtered.length} of ${departments.data?.length ?? 0} departments`} />
-        {departments.isPending ? <LoadingState label="Loading departments" /> : departments.isError ? <ErrorState error={departments.error} onRetry={() => void departments.refetch()} /> : filtered.length === 0 ? <EmptyState title={departments.data.length === 0 ? 'No departments yet' : 'No departments match this search'} description={departments.data.length === 0 ? 'Add the first academic department to begin organizing courses and people.' : 'Try a different department name or code.'} /> : (
+        {departments.isPending ? <TableSkeleton rows={7} columns={3} label="Loading departments" /> : departments.isError ? <ErrorState error={departments.error} onRetry={() => void departments.refetch()} /> : filtered.length === 0 ? <EmptyState title={departments.data.length === 0 ? 'No departments yet' : 'No departments match this search'} description={departments.data.length === 0 ? 'Add the first academic department to begin organizing courses and people.' : 'Try a different department name or code.'} /> : (
           <ResourceTable caption="Department directory" columns={columns} rows={filtered} getRowKey={(department) => department.departmentId} actions={(department) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`Edit ${department.name}`} title="Edit department" onClick={() => { setEditing(department); setFormOpen(true) }}><Pencil size={16} /></Button>

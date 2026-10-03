@@ -11,11 +11,13 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
+import { formatDateTime } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { enrollmentKeys, getEnrollments } from '../enrollments/enrollments.api'
 import { studentKeys, getStudents } from '../students/students.api'
@@ -61,7 +63,7 @@ export function AttendanceRecordsPage() {
   }
   const columns = [
     { key: 'student', header: 'Student', render: (record: AttendanceRecordResponse) => { const enrollment = enrollmentById.get(record.enrollmentId); const student = enrollment ? studentById.get(enrollment.studentId) : undefined; return <div className="identity-cell"><span className="identity-avatar identity-avatar--teal" aria-hidden="true">{student?.firstName?.slice(0, 1) ?? '—'}</span><span><strong>{student?.enrollmentNumber ?? `Enrollment #${record.enrollmentId}`}</strong><small>{student ? `${student.firstName} ${student.lastName ?? ''}` : `Enrollment #${record.enrollmentId}`}</small></span></div> } },
-    { key: 'session', header: 'Session', render: (record: AttendanceRecordResponse) => { const session = sessionById.get(record.attendanceSessionId); const course = session ? courseById.get(session.courseId) : undefined; return session ? `${session.sessionDate} · ${course?.courseCode ?? `Course #${session.courseId}`}` : `Session #${record.attendanceSessionId}` } },
+    { key: 'session', header: 'Session', render: (record: AttendanceRecordResponse) => { const session = sessionById.get(record.attendanceSessionId); const course = session ? courseById.get(session.courseId) : undefined; return session ? `${formatDateTime(session.sessionDate) ?? '—'} · ${course?.courseCode ?? `Course #${session.courseId}`}` : `Session #${record.attendanceSessionId}` } },
     { key: 'status', header: 'Status', render: (record: AttendanceRecordResponse) => <StatusBadge status={record.status} /> },
   ]
   const dependencyError = sessions.error ?? enrollments.error ?? students.error ?? courses.error
@@ -77,16 +79,16 @@ export function AttendanceRecordsPage() {
       {dependencyError && <ErrorState error={dependencyError} onRetry={() => { void sessions.refetch(); void enrollments.refetch(); void students.refetch(); void courses.refetch() }} />}
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${records.data?.totalElements ?? 0} records total`} filters={(
-          <><SelectField label="Session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); setPage(0) }}><option value="ALL">All sessions</option>{sessions.data?.map((session) => <option key={session.attendanceSessionId} value={session.attendanceSessionId}>{session.sessionDate} · #{session.attendanceSessionId}</option>)}</SelectField><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => { setEnrollmentId(event.target.value); setPage(0) }}><option value="ALL">All enrollments</option>{enrollments.data?.map((enrollment) => <option key={enrollment.enrollmentId} value={enrollment.enrollmentId}>#{enrollment.enrollmentId} · {studentById.get(enrollment.studentId)?.enrollmentNumber ?? `Student #${enrollment.studentId}`}</option>)}</SelectField><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="PRESENT">Present</option><option value="ABSENT">Absent</option><option value="LATE">Late</option></SelectField></>
+          <><SelectField label="Session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); setPage(0) }}><option value="ALL">All sessions</option>{sessions.data?.map((session) => <option key={session.attendanceSessionId} value={session.attendanceSessionId}>{formatDateTime(session.sessionDate) ?? '—'} · #{session.attendanceSessionId}</option>)}</SelectField><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => { setEnrollmentId(event.target.value); setPage(0) }}><option value="ALL">All enrollments</option>{enrollments.data?.map((enrollment) => <option key={enrollment.enrollmentId} value={enrollment.enrollmentId}>#{enrollment.enrollmentId} · {studentById.get(enrollment.studentId)?.enrollmentNumber ?? `Student #${enrollment.studentId}`}</option>)}</SelectField><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="PRESENT">Present</option><option value="ABSENT">Absent</option><option value="LATE">Late</option></SelectField></>
         )} />
-        {records.isPending ? <LoadingState label="Loading attendance records" /> : records.isError ? <ErrorState error={records.error} onRetry={() => void records.refetch()} /> : !filtered.length ? <EmptyState title={records.data.totalElements ? 'No records match this page search' : 'No attendance records yet'} description={records.data.totalElements ? 'Try another search phrase or use the page controls.' : 'Create a session and add attendance records one enrollment at a time.'} /> : (
+        {records.isPending ? <TableSkeleton rows={8} columns={4} label="Loading attendance records" /> : records.isError ? <ErrorState error={records.error} onRetry={() => void records.refetch()} /> : !filtered.length ? <EmptyState title={records.data.totalElements ? 'No records match this page search' : 'No attendance records yet'} description={records.data.totalElements ? 'Try another search phrase or use the page controls.' : 'Create a session and add attendance records one enrollment at a time.'} /> : (
           <ResourceTable caption="Attendance records" columns={columns} rows={filtered} getRowKey={(record) => record.attendanceRecordId} actions={(record) => <Button size="sm" variant="ghost" title="View attendance record" aria-label={`View attendance record ${record.attendanceRecordId}`} onClick={() => setViewing(record)}><Eye size={16} /></Button>} />
         )}
         {records.data && <PaginationControls page={records.data.page} size={records.data.size} totalElements={records.data.totalElements} totalPages={records.data.totalPages} onPageChange={setPage} />}
       </Card>
       <AttendanceRecordFormDialog open={formOpen} onOpenChange={setFormOpen} sessions={sessions.data ?? []} enrollments={enrollments.data ?? []} students={students.data ?? []} courses={courses.data ?? []} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`Attendance record #${viewing.attendanceRecordId}`} description="Attendance entry details" notice={detail.isPending ? <LoadingState label="Refreshing attendance details" /> : detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : undefined} fields={[
-        { label: 'Record ID', value: detail.data?.attendanceRecordId ?? viewing.attendanceRecordId }, { label: 'Session', value: recordSession ? `${recordSession.sessionDate}${recordSession.topic ? ` · ${recordSession.topic}` : ''}` : `Session #${viewing.attendanceSessionId}` },
+        { label: 'Record ID', value: detail.data?.attendanceRecordId ?? viewing.attendanceRecordId }, { label: 'Session', value: recordSession ? `${formatDateTime(recordSession.sessionDate) ?? '—'}${recordSession.topic ? ` · ${recordSession.topic}` : ''}` : `Session #${viewing.attendanceSessionId}` },
         { label: 'Course', value: recordSession ? courseById.get(recordSession.courseId)?.courseCode ?? `Course #${recordSession.courseId}` : '—' },
         { label: 'Student', value: recordStudent ? `${recordStudent.firstName} ${recordStudent.lastName ?? ''} · ${recordStudent.enrollmentNumber}` : `Enrollment #${viewing.enrollmentId}` },
         { label: 'Status', value: detail.data?.status ?? viewing.status },

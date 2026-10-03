@@ -4,7 +4,6 @@ import { Eye, Pencil, Plus, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
@@ -12,12 +11,17 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { TableSkeleton } from '../../components/ui/Skeleton'
+import { AttendanceBar } from '../../components/charts/AttendanceBar'
+import { Student360Drawer } from '../../components/students/Student360Drawer'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
-import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
 import { getDepartments, departmentKeys } from '../departments/departments.api'
 import { getUsers, userKeys } from '../users/users.api'
+import { getAttendanceRecords, attendanceRecordKeys } from '../attendance/attendance.api'
+import { getEnrollments, enrollmentKeys } from '../enrollments/enrollments.api'
+import { studentAttendanceRates } from '../../lib/format/analytics'
 import { StudentFormDialog } from './StudentFormDialog'
 import { createStudent, deactivateStudent, getStudentsPage, studentKeys, updateStudent } from './students.api'
 import type { StudentRequest, StudentResponse } from '../../types/api'
@@ -29,6 +33,8 @@ export function StudentsPage() {
   const students = useQuery({ queryKey: studentKeys.page(page, pageSize), queryFn: () => getStudentsPage(page, pageSize) })
   const users = useQuery({ queryKey: userKeys.all, queryFn: getUsers })
   const departments = useQuery({ queryKey: departmentKeys.all, queryFn: getDepartments })
+  const enrollments = useQuery({ queryKey: enrollmentKeys.all, queryFn: getEnrollments })
+  const records = useQuery({ queryKey: attendanceRecordKeys.all, queryFn: getAttendanceRecords })
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
   const [departmentId, setDepartmentId] = useState('ALL')
@@ -45,6 +51,7 @@ export function StudentsPage() {
   const availableUsers = (users.data ?? []).filter((user) => user.role === 'STUDENT' && user.active && !linkedUserIds.has(user.userId))
   const userById = useMemo(() => new Map((users.data ?? []).map((user) => [user.userId, user])), [users.data])
   const departmentById = new Map((departments.data ?? []).map((department) => [department.departmentId, department]))
+  const attendanceRates = studentAttendanceRates(enrollments.data ?? [], records.data ?? [])
   const filtered = useMemo(() => (students.data?.content ?? []).filter((student) => {
     const user = userById.get(student.userId)
     const matchSearch = `${student.firstName} ${student.lastName ?? ''} ${student.enrollmentNumber} ${user?.username ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())
@@ -63,6 +70,7 @@ export function StudentsPage() {
     { key: 'enrollment', header: 'Enrollment no.', render: (student: StudentResponse) => <span className="mono-label">{student.enrollmentNumber}</span> },
     { key: 'department', header: 'Department', render: (student: StudentResponse) => departmentById.get(student.departmentId)?.name ?? `Department #${student.departmentId}` },
     { key: 'year', header: 'Admission year', mobileHidden: true, render: (student: StudentResponse) => student.admissionYear },
+    { key: 'attendance', header: 'Attendance', render: (student: StudentResponse) => <AttendanceBar value={attendanceRates.get(student.studentId)?.percentage ?? null} /> },
     { key: 'status', header: 'Status', render: (student: StudentResponse) => <StatusBadge status={student.status} /> },
   ]
 
@@ -74,8 +82,8 @@ export function StudentsPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${students.data?.totalElements ?? 0} total`} filters={(
           <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="GRADUATED">Graduated</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {students.isPending ? <LoadingState label="Loading student records" /> : students.isError ? <ErrorState error={students.error} onRetry={() => void students.refetch()} /> : filtered.length === 0 ? <EmptyState title={students.data.totalElements === 0 ? 'No student profiles yet' : 'No students on this page match these filters'} description={students.data.totalElements === 0 ? 'Create or select a user account with the STUDENT role, then add a profile.' : 'Try another name, department or move to another page.'} /> : (
-          <ResourceTable caption="Student directory" columns={columns} rows={filtered} getRowKey={(student) => student.studentId} actions={(student) => (
+        {students.isPending ? <TableSkeleton rows={8} columns={6} label="Loading student records" /> : students.isError ? <ErrorState error={students.error} onRetry={() => void students.refetch()} /> : filtered.length === 0 ? <EmptyState title={students.data.totalElements === 0 ? 'No student profiles yet' : 'No students on this page match these filters'} description={students.data.totalElements === 0 ? 'Create or select a user account with the STUDENT role, then add a profile.' : 'Try another name, department or move to another page.'} /> : (
+          <ResourceTable caption="Student directory" columns={columns} rows={filtered} getRowKey={(student) => student.studentId} onRowActivate={setViewing} actions={(student) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`View ${student.firstName} ${student.lastName ?? ''}`} title="View details" onClick={() => setViewing(student)}><Eye size={16} /></Button>
               <Button size="sm" variant="ghost" aria-label={`Edit ${student.firstName} ${student.lastName ?? ''}`} title="Edit profile" onClick={() => { setEditing(student); setFormOpen(true) }}><Pencil size={16} /></Button>
@@ -86,13 +94,11 @@ export function StudentsPage() {
         {!students.isPending && !students.isError && students.data && <PaginationControls page={students.data.page} size={students.data.size} totalElements={students.data.totalElements} totalPages={students.data.totalPages} onPageChange={setPage} />}
       </Card>
       <StudentFormDialog open={formOpen} onOpenChange={setFormOpen} student={editing} users={availableUsers} departments={departments.data ?? []} onSubmit={save} />
-      {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`${viewing.firstName} ${viewing.lastName ?? ''}`} description="Student academic profile" fields={[
-        { label: 'Student ID', value: viewing.studentId }, { label: 'Enrollment number', value: viewing.enrollmentNumber },
-        { label: 'Account', value: userById.get(viewing.userId)?.username ?? `User #${viewing.userId}` },
-        { label: 'Department', value: departmentById.get(viewing.departmentId)?.name ?? `Department #${viewing.departmentId}` },
-        { label: 'Admission year', value: viewing.admissionYear }, { label: 'Date of birth', value: viewing.dateOfBirth },
-        { label: 'Phone', value: viewing.phone }, { label: 'Status', value: viewing.status },
-      ]} />}
+      <Student360Drawer
+        student={viewing}
+        onOpenChange={(open) => { if (!open) setViewing(null) }}
+        departmentName={viewing ? departmentById.get(viewing.departmentId)?.name : undefined}
+      />
     </div>
   )
 }

@@ -47,8 +47,6 @@ export function LoginPage() {
   return (
     <div className="login-card">
       <div className="login-card__heading">
-        <div className="login-mark"><LockKeyhole size={19} aria-hidden="true" /></div>
-        <p className="eyebrow">Welcome back</p>
         <h1>Sign in to your workspace</h1>
         <p>Use the account provided by your campus administrator.</p>
       </div>

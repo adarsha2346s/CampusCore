@@ -10,6 +10,7 @@ import { Dialog } from '../../components/ui/Dialog'
 import { attendanceRecordKeys, attendanceSessionKeys, getAttendanceRecordsBySessionPage, getAttendanceSession } from './attendance.api'
 import { useState } from 'react'
 import type { AttendanceRecordResponse, AttendanceSessionResponse, CourseResponse, FacultyResponse } from '../../types/api'
+import { formatDateTime } from '../../lib/format/datetime'
 
 export function AttendanceSessionDetailsDialog({ session, onOpenChange, courses, faculty }: {
   session: AttendanceSessionResponse | null
@@ -34,7 +35,7 @@ export function AttendanceSessionDetailsDialog({ session, onOpenChange, courses,
     <Dialog open={session !== null} onOpenChange={onOpenChange} title={current?.topic || `Session #${sessionId}`} description="Attendance session and its individual records.">
       {detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : detail.isPending ? <LoadingState label="Loading session details" /> : (
         <div className="session-detail-stack">
-          <dl className="record-details"><div><dt>Course</dt><dd>{course ? `${course.courseCode} · ${course.courseName}` : `Course #${current?.courseId}`}</dd></div><div><dt>Faculty</dt><dd>{member ? `${member.firstName} ${member.lastName ?? ''} · ${member.employeeNumber}` : `Faculty #${current?.facultyId}`}</dd></div><div><dt>Session date</dt><dd>{current?.sessionDate}</dd></div><div><dt>Topic</dt><dd>{current?.topic || <span className="muted">Not provided</span>}</dd></div></dl>
+          <dl className="record-details"><div><dt>Course</dt><dd>{course ? `${course.courseCode} · ${course.courseName}` : `Course #${current?.courseId}`}</dd></div><div><dt>Faculty</dt><dd>{member ? `${member.firstName} ${member.lastName ?? ''} · ${member.employeeNumber}` : `Faculty #${current?.facultyId}`}</dd></div><div><dt>Session date</dt><dd>{current ? formatDateTime(current.sessionDate) ?? '—' : '—'}</dd></div><div><dt>Topic</dt><dd>{current?.topic || <span className="muted">Not provided</span>}</dd></div></dl>
           <Card className="session-records-card"><div className="section-heading"><div><p className="eyebrow">Session activity</p><h2>Attendance records</h2></div>{records.data && <Badge>{records.data.totalElements} records</Badge>}</div>
             {records.isPending ? <LoadingState label="Loading session records" /> : records.isError ? <ErrorState error={records.error} onRetry={() => void records.refetch()} /> : !records.data.totalElements ? <EmptyState title="No attendance records yet" description="Individual attendance records will appear here as they are entered." /> : <><ResourceTable caption="Attendance records for this session" columns={columns} rows={records.data.content} getRowKey={(record) => record.attendanceRecordId} /><PaginationControls page={records.data.page} size={records.data.size} totalElements={records.data.totalElements} totalPages={records.data.totalPages} onPageChange={setPage} /></>}
           </Card>

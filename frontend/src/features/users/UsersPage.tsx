@@ -4,13 +4,13 @@ import { Eye, Pencil, Plus, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -67,7 +67,7 @@ export function UsersPage() {
           <><SelectField label="Role" value={role} onChange={(event) => { setRole(event.target.value); setPage(0) }}><option value="ALL">All roles</option><option value="ADMIN">Administrators</option><option value="FACULTY">Faculty</option><option value="STUDENT">Students</option></SelectField><SelectField label="Status" value={active} onChange={(event) => { setActive(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="true">Active</option><option value="false">Inactive</option></SelectField></>
         )} />
         {notice && <p className="sr-only" role="status">{notice}</p>}
-        {users.isPending ? <LoadingState label="Loading user accounts" /> : users.isError ? <ErrorState error={users.error} onRetry={() => void users.refetch()} /> : filtered.length === 0 ? <EmptyState title={users.data.totalElements === 0 ? 'No user accounts yet' : 'No accounts on this page match these filters'} description={users.data.totalElements === 0 ? 'Create an account to get started.' : 'Try changing filters or moving to another page.'} /> : (
+        {users.isPending ? <TableSkeleton rows={8} columns={5} label="Loading user accounts" /> : users.isError ? <ErrorState error={users.error} onRetry={() => void users.refetch()} /> : filtered.length === 0 ? <EmptyState title={users.data.totalElements === 0 ? 'No user accounts yet' : 'No accounts on this page match these filters'} description={users.data.totalElements === 0 ? 'Create an account to get started.' : 'Try changing filters or moving to another page.'} /> : (
           <ResourceTable caption="Campus user accounts" columns={columns} rows={filtered} getRowKey={(user) => user.userId} actions={(user) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`View ${user.username}`} title="View details" onClick={() => setViewing(user)}><Eye size={16} /></Button>

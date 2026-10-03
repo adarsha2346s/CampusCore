@@ -3,7 +3,8 @@ import {
   LayoutDashboard, LibraryBig, ListChecks, NotebookTabs, Users, UserRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import type { Role } from '../../types/api'
 
 interface NavItem {
@@ -55,8 +56,44 @@ const navigation: Record<Role, NavGroup[]> = {
 }
 
 export function RoleNavigation({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
+  const navRef = useRef<HTMLElement>(null)
+  const indicatorRef = useRef<HTMLSpanElement>(null)
+  const location = useLocation()
+
+  useEffect(() => {
+    const nav = navRef.current
+    const indicator = indicatorRef.current
+    if (!nav || !indicator) return
+
+    const active = nav.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!active) {
+      indicator.dataset.visible = 'false'
+      return
+    }
+
+    const move = () => {
+      const navBox = nav.getBoundingClientRect()
+      const activeBox = active.getBoundingClientRect()
+      indicator.style.width = `${activeBox.width}px`
+      indicator.style.height = `${activeBox.height}px`
+      indicator.style.transform = `translate(${activeBox.left - navBox.left + nav.scrollLeft}px, ${activeBox.top - navBox.top + nav.scrollTop}px)`
+      indicator.dataset.visible = 'true'
+    }
+
+    move()
+    const observer = new ResizeObserver(move)
+    observer.observe(nav)
+    window.addEventListener('resize', move)
+    document.fonts?.ready.then(move).catch(() => undefined)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', move)
+    }
+  }, [location.pathname, role])
+
   return (
-    <nav className="side-nav" aria-label="Main navigation">
+    <nav className="side-nav" ref={navRef} aria-label="Main navigation">
+      <span className="side-nav__indicator" ref={indicatorRef} aria-hidden="true" />
       {navigation[role].map(({ label, items }) => (
         <div className="side-nav__group" key={label}>
           <p className="side-nav__label">{label}</p>
@@ -64,11 +101,12 @@ export function RoleNavigation({ role, onNavigate }: { role: Role; onNavigate?: 
             <NavLink
               key={path}
               to={path}
+              viewTransition
               onClick={onNavigate}
               className={({ isActive }) => `side-nav__link${isActive ? ' is-active' : ''}`}
               end={path !== '/admin/attendance'}
             >
-              <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+              <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
               <span>{itemLabel}</span>
             </NavLink>
           ))}

@@ -6,8 +6,11 @@ services:
       MYSQL_USER: ${DB_USERNAME:?Set DB_USERNAME in .env}
       MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
-    ports:
-      - "3306:3306"
+    # The database is intentionally not published to the host. The backend
+    # reaches it over the Compose network, so no host port is required and the
+    # database is never exposed outside the stack. Use
+    # `docker compose exec mysql mysql -ucampuscore -p"$DB_PASSWORD" campuscore`
+    # for local database access.
     volumes:
       - campuscore-mysql:/var/lib/mysql
       - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -38,8 +41,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+      args:
+        # Vite inlines VITE_* variables at build time, so the public API root is
+        # a build argument rather than a runtime environment variable.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
     ports:
       - "5173:5173"
     depends_on:

@@ -3,24 +3,23 @@ import { useQuery } from '@tanstack/react-query'
 import { Eye, FileClock, RotateCcw } from 'lucide-react'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { getAuditLogsPage, auditKeys } from './audit.api'
 import type { AuditFilter } from './audit.api'
+import { formatDateTime } from '../../lib/format/datetime'
 import type { AuditLogResponse } from '../../types/api'
 
 function formatTimestamp(value: string) {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(parsed)
+  return formatDateTime(value) ?? value
 }
 
 export function AuditLogPage() {
@@ -56,7 +55,7 @@ export function AuditLogPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${source.data?.totalElements ?? 0} entries total`} filters={(
           <><SelectField label="User" value={userId} onChange={(event) => { setUserId(event.target.value); setPage(0) }}><option value="ALL">All users</option>{users.map((id) => <option key={id} value={id}>User #{id}</option>)}</SelectField><SelectField label="Entity" value={entity} onChange={(event) => { setEntity(event.target.value); setPage(0) }}><option value="ALL">All entities</option>{entities.map((name) => <option key={name} value={name}>{name}</option>)}</SelectField><SelectField label="Action" value={action} onChange={(event) => { setAction(event.target.value); setPage(0) }}><option value="ALL">All actions</option>{actions.map((name) => <option key={name} value={name}>{name}</option>)}</SelectField><Button size="sm" variant="ghost" onClick={clearFilters} title="Clear search and filters"><RotateCcw size={15} aria-hidden="true" /> Clear</Button></>
         )} />
-        {source.isPending ? <LoadingState label="Loading audit history" /> : source.isError ? <ErrorState error={source.error} onRetry={() => void source.refetch()} /> : !filtered.length ? <EmptyState title={source.data.totalElements ? 'No entries match this page search' : 'No audit entries available'} description={source.data.totalElements ? 'Try another search term or use the page controls.' : 'Recorded system activity will appear here when available.'} /> : (
+        {source.isPending ? <TableSkeleton rows={8} columns={4} label="Loading audit history" /> : source.isError ? <ErrorState error={source.error} onRetry={() => void source.refetch()} /> : !filtered.length ? <EmptyState title={source.data.totalElements ? 'No entries match this page search' : 'No audit entries available'} description={source.data.totalElements ? 'Try another search term or use the page controls.' : 'Recorded system activity will appear here when available.'} /> : (
           <ResourceTable caption="CampusCore audit log" columns={columns} rows={filtered} getRowKey={(log) => log.auditLogId} actions={(log) => <Button size="sm" variant="ghost" title="View audit entry details" aria-label={`View audit entry ${log.auditLogId}`} onClick={() => setViewing(log)}><Eye size={16} /></Button>} />
         )}
         {source.data && <PaginationControls page={source.data.page} size={source.data.size} totalElements={source.data.totalElements} totalPages={source.data.totalPages} onPageChange={setPage} />}

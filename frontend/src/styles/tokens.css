@@ -1,25 +1,210 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
+
+/*
+ * CampusCore design tokens.
+ * Values mirror the CampusCore preview "Minimalist Modern" layer exactly:
+ * #FAFAFA canvas, white surfaces, #0F172A ink + sidebar, #0052FF → #4D7CFF
+ * primary gradient, #E2E8F0 borders, with dark and monochrome variants.
+ */
 :root {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #1c2738; background: #f4f6fa; font-synthesis: none; text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-  --color-ink: #1c2738; --color-ink-soft: #556277; --color-muted: #66758a; --color-subtle: #a7afbd;
-  --color-canvas: #f4f6fa; --color-surface: #fff; --color-surface-muted: #f8f9fc;
-  --color-border: #e6eaf0; --color-border-strong: #d9dfe8; --color-primary: #3157a4;
-  --color-primary-hover: #27498e; --color-primary-soft: #edf2fb; --color-teal: #27877e;
-  --color-teal-soft: #e8f5f2; --color-warning: #a87324; --color-warning-soft: #fff5e6;
-  --color-danger: #b64e53; --color-danger-soft: #fff0f0; --sidebar: #17243a;
-  --sidebar-muted: #a9b4c7; --sidebar-active: #263b5b; --font-display: 'Manrope', 'DM Sans', sans-serif;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
-  --space-6: 24px; --space-8: 32px; --space-10: 40px; --radius-sm: 8px; --radius-md: 12px;
-  --radius-lg: 18px; --shadow-card: 0 4px 18px rgb(26 41 68 / 4%), 0 1px 2px rgb(26 41 68 / 3%);
-  --shadow-popover: 0 16px 48px rgb(21 34 54 / 16%), 0 2px 8px rgb(21 34 54 / 6%);
-  --focus-ring: 0 0 0 3px rgb(49 87 164 / 22%);
+  color-scheme: light;
+
+  /* Core palette (preview "modern" layer) */
+  --bg: #fafafa;
+  --sf: #ffffff;
+  --ink: #0f172a;
+  --mu: #64748b;
+  --ln: #e2e8f0;
+  --ln-soft: #eef2f7;
+  --sd: #0f172a;
+  --sd-ink: #cbd5e1;
+  --pr: #0052ff;
+  --pr2: #4d7cff;
+  --hm: #e2e8f0;
+  --hm-soft: #f1f5f9;
+
+  /* Semantic feedback (kept distinct from the brand blue for legibility) */
+  --ok: #0f8a6c;
+  --ok-soft: #e7f6f1;
+  --wa: #b7791f;
+  --wa-soft: #fdf3e2;
+  --bad: #d24358;
+  --bad-soft: #fdeff1;
+
+  --gradient-primary: linear-gradient(135deg, #0052ff, #4d7cff);
+  --gradient-primary-soft: linear-gradient(135deg, #0052ff, #4d7cff);
+
+  /* Typography */
+  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Calistoga', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.65rem, 2vw, 2rem);
+  --text-hero: clamp(2.4rem, 4.6vw, 3.6rem);
+
+  /* Radii + elevation */
+  --r-sm: 10px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --sh-sm: 0 1px 3px rgb(15 23 42 / 6%);
+  --sh-md: 0 4px 6px rgb(0 0 0 / 7%);
+  --sh-lg: 0 20px 25px rgb(0 0 0 / 10%);
+  --sh-xl: 0 24px 48px rgb(15 23 42 / 14%);
+  --sh-acc: 0 8px 24px rgb(0 82 255 / 25%);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--pr);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.3, 0.8, 0.2, 1);
+  --ease-pop: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-nav: 350ms;
+
+  /* Layout */
+  --sidebar-width: 236px;
+  --z-sidebar: 30;
+  --z-scrim: 40;
+  --z-dialog: 70;
+  --z-drawer: 65;
+
+  /* Semantic aliases shared by every feature surface. */
+  --color-ink: var(--ink);
+  --color-ink-soft: #334155;
+  --color-muted: var(--mu);
+  --color-subtle: #94a3b8;
+  --color-canvas: var(--bg);
+  --color-surface: var(--sf);
+  --color-surface-muted: var(--hm-soft);
+  --color-border: var(--ln);
+  --color-border-strong: #cbd5e1;
+  --color-primary: var(--pr);
+  --color-primary-hover: #0046db;
+  --color-primary-soft: #eff5ff;
+  --color-teal: var(--ok);
+  --color-teal-soft: var(--ok-soft);
+  --color-warning: var(--wa);
+  --color-warning-soft: var(--wa-soft);
+  --color-danger: var(--bad);
+  --color-danger-soft: var(--bad-soft);
+  --sidebar: var(--sd);
+  --sidebar-ink: #ffffff;
+  --sidebar-muted: #93a4bd;
+  --sidebar-active: #ffffff;
+  --shadow-card: var(--sh-sm);
+  --shadow-popover: var(--sh-xl);
 }
-* { box-sizing: border-box; }
-html { min-width: 320px; min-height: 100%; }
-body { min-width: 320px; min-height: 100vh; margin: 0; }
-button, input { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
-a { color: inherit; }
-::selection { color: var(--color-ink); background: #dce7fa; }
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --sf: #111a2e;
+  --ink: #f1f5f9;
+  --mu: #94a3b8;
+  --ln: #1e293b;
+  --ln-soft: #172136;
+  --sd: #080f1f;
+  --sd-ink: #cbd5e1;
+  --pr: #4d7cff;
+  --pr2: #7c9cff;
+  --hm: #1e293b;
+  --hm-soft: #16203a;
+  --ok: #34d399;
+  --ok-soft: #10312c;
+  --wa: #fbbf24;
+  --wa-soft: #342911;
+  --bad: #fb7185;
+  --bad-soft: #3a1b25;
+  --color-ink-soft: #cbd5e1;
+  --color-subtle: #94a3b8;
+  --color-border-strong: #334155;
+  --color-primary-hover: #7c9cff;
+  --color-primary-soft: #16234a;
+  --sidebar-active: #ffffff;
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 30%);
+  --shadow-popover: 0 24px 60px rgb(0 0 0 / 55%);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--pr2);
+}
+
+/* Minimalist Monochrome layer (preview parity). */
+:root[data-ds='mono'] {
+  --bg: #fff;
+  --sf: #fff;
+  --ink: #000;
+  --mu: #525252;
+  --ln: #000;
+  --ln-soft: #e5e5e5;
+  --sd: #000;
+  --sd-ink: #fff;
+  --pr: #000;
+  --pr2: #000;
+  --hm: #e5e5e5;
+  --hm-soft: #f5f5f5;
+  --ok: #000;
+  --ok-soft: #f5f5f5;
+  --wa: #525252;
+  --wa-soft: #f5f5f5;
+  --bad: #000;
+  --bad-soft: #f5f5f5;
+  --gradient-primary: #000;
+  --gradient-primary-soft: #000;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --color-ink-soft: #111;
+  --color-subtle: #737373;
+  --color-border-strong: #000;
+  --color-primary-hover: #fff;
+  --color-primary-soft: #f5f5f5;
+  --sidebar-active: #000;
+  --shadow-card: none;
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 14%);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink);
+}
+
+:root[data-ds='mono'][data-theme='dark'] {
+  --bg: #000;
+  --sf: #000;
+  --ink: #fff;
+  --mu: #a3a3a3;
+  --ln: #fff;
+  --ln-soft: #262626;
+  --sd: #000;
+  --sd-ink: #fff;
+  --pr: #fff;
+  --pr2: #fff;
+  --hm: #262626;
+  --hm-soft: #171717;
+  --gradient-primary: #fff;
+  --gradient-primary-soft: #fff;
+  --color-ink-soft: #fff;
+  --color-muted: #a3a3a3;
+  --color-border-strong: #fff;
+  --color-primary-hover: #000;
+  --color-primary-soft: #262626;
+  --sidebar-active: #fff;
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 70%);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink);
+}
+
+:root[data-ds='mono'] *,
+:root[data-ds='mono'] *::before,
+:root[data-ds='mono'] *::after {
+  border-radius: 0 !important;
+}

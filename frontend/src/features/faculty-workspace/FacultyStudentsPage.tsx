@@ -1,16 +1,16 @@
-import { Eye, GraduationCap } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { TableSkeleton } from '../../components/ui/Skeleton'
+import { Student360Drawer } from '../../components/students/Student360Drawer'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
-import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { StatusBadge } from '../admin-shared/StatusBadge'
 import { departmentKeys, getDepartments } from '../departments/departments.api'
 import { getStudentsPage, studentKeys } from '../students/students.api'
@@ -40,20 +40,18 @@ export function FacultyStudentsPage() {
       <PageHeader eyebrow="Academic directory" title="Students" description="Read-only student information available to faculty accounts." />
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={setSearch} searchLabel="Search this page" countLabel={`${students.data?.totalElements ?? 0} students total`} />
-        {students.isPending || departments.isPending ? <LoadingState label="Loading student directory" />
+        {students.isPending || departments.isPending ? <TableSkeleton rows={8} columns={4} label="Loading student directory" />
           : students.isError ? <ErrorState error={students.error} onRetry={() => void students.refetch()} />
             : departments.isError ? <ErrorState error={departments.error} onRetry={() => void departments.refetch()} />
               : filtered.length === 0 ? <EmptyState title={students.data.totalElements === 0 ? 'No student profiles available' : 'No students match this page search'} description={students.data.totalElements === 0 ? 'Student profiles will appear here when they are available to your account.' : 'Try another search or use the page controls.'} />
-                : <ResourceTable caption="Read-only student directory" columns={columns} rows={filtered} getRowKey={(student) => student.studentId} actions={(student) => <div className="row-actions"><Button size="sm" variant="ghost" aria-label={`View ${student.firstName} ${student.lastName ?? ''}`} title="View student details" onClick={() => setSelected(student)}><Eye size={16} aria-hidden="true" /></Button></div>} />}
+                : <ResourceTable caption="Read-only student directory" columns={columns} rows={filtered} getRowKey={(student) => student.studentId} onRowActivate={setSelected} actions={(student) => <div className="row-actions"><Button size="sm" variant="ghost" aria-label={`View ${student.firstName} ${student.lastName ?? ''}`} title="View student details" onClick={() => setSelected(student)}><Eye size={16} aria-hidden="true" /></Button></div>} />}
         {students.data && <PaginationControls page={students.data.page} size={students.data.size} totalElements={students.data.totalElements} totalPages={students.data.totalPages} onPageChange={setPage} />}
       </Card>
-      <RecordDetailsDialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null) }} title={selected ? `${selected.firstName} ${selected.lastName ?? ''}`.trim() : 'Student details'} description="Student information available for academic work." fields={selected ? [
-        { label: 'Enrollment number', value: selected.enrollmentNumber },
-        { label: 'Department', value: departmentById.get(selected.departmentId)?.name },
-        { label: 'Admission year', value: selected.admissionYear },
-        { label: 'Status', value: selected.status },
-        { label: 'Phone', value: selected.phone },
-      ] : []} notice={<p className="detail-notice"><GraduationCap size={16} aria-hidden="true" /> Student records are read-only in the faculty workspace.</p>} />
+      <Student360Drawer
+        student={selected}
+        onOpenChange={(open) => { if (!open) setSelected(null) }}
+        departmentName={selected ? departmentById.get(selected.departmentId)?.name : undefined}
+      />
     </div>
   )
 }

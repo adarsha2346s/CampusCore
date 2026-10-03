@@ -13,6 +13,7 @@ import { SelectField } from '../../components/forms/SelectField'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { notifyError } from '../admin-shared/feedback'
@@ -57,7 +58,7 @@ export function GradingPage() {
       <PageHeader eyebrow="Academic operations" title="Grading" description="Review grading policy bands and request course GPA calculations from the backend." action={<Button onClick={() => setFormOpen(true)}><Plus size={17} aria-hidden="true" /> Add policy band</Button>} />
       <Card className="directory-card">
         <div className="directory-toolbar"><div className="directory-toolbar__search"><Search size={17} aria-hidden="true" /><label className="sr-only" htmlFor="policy-search">Search grading policies</label><input id="policy-search" className="input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search policy or grade" /></div><p className="directory-toolbar__count">{filtered.length} policy bands</p></div>
-        {policies.isPending ? <LoadingState label="Loading grading policies" /> : policies.isError ? <ErrorState error={policies.error} onRetry={() => void policies.refetch()} /> : !filtered.length ? <EmptyState title={policies.data.length ? 'No policy bands match this search' : 'No grading policies yet'} description={policies.data.length ? 'Try another policy name or grade.' : 'Add policy bands to support the backend GPA calculation.'} /> : <ResourceTable caption="Grading policy bands" columns={columns} rows={filtered} getRowKey={(policy) => policy.gradingPolicyId} actions={(policy) => <Button size="sm" variant="ghost" title="View policy details" aria-label={`View ${policy.name} ${policy.grade} policy band`} onClick={() => setViewing(policy)}><Eye size={16} /></Button>} />}
+        {policies.isPending ? <TableSkeleton rows={7} columns={4} label="Loading grading policies" /> : policies.isError ? <ErrorState error={policies.error} onRetry={() => void policies.refetch()} /> : !filtered.length ? <EmptyState title={policies.data.length ? 'No policy bands match this search' : 'No grading policies yet'} description={policies.data.length ? 'Try another policy name or grade.' : 'Add policy bands to support the backend GPA calculation.'} /> : <ResourceTable caption="Grading policy bands" columns={columns} rows={filtered} getRowKey={(policy) => policy.gradingPolicyId} actions={(policy) => <Button size="sm" variant="ghost" title="View policy details" aria-label={`View ${policy.name} ${policy.grade} policy band`} onClick={() => setViewing(policy)}><Eye size={16} /></Button>} />}
       </Card>
 
       <Card className="gpa-lookup-card">

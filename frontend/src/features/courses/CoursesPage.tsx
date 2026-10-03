@@ -4,12 +4,12 @@ import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
-import { LoadingState } from '../../components/data-display/LoadingState'
 import { ResourceTable } from '../../components/data-display/ResourceTable'
 import { PaginationControls } from '../../components/data-display/PaginationControls'
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -63,7 +63,7 @@ export function CoursesPage() {
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${courses.data?.totalElements ?? 0} total`} filters={(
           <><SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></SelectField><SelectField label="Department" value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setPage(0) }}><option value="ALL">All departments</option>{departments.data?.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.code}</option>)}</SelectField></>
         )} />
-        {courses.isPending ? <LoadingState label="Loading courses" /> : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} /> : filtered.length === 0 ? <EmptyState title={courses.data.totalElements === 0 ? 'No courses yet' : 'No courses on this page match these filters'} description={courses.data.totalElements === 0 ? 'Create a department first, then add its courses to the catalog.' : 'Try another search, status, department or page.'} /> : (
+        {courses.isPending ? <TableSkeleton rows={8} columns={5} label="Loading courses" /> : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} /> : filtered.length === 0 ? <EmptyState title={courses.data.totalElements === 0 ? 'No courses yet' : 'No courses on this page match these filters'} description={courses.data.totalElements === 0 ? 'Create a department first, then add its courses to the catalog.' : 'Try another search, status, department or page.'} /> : (
           <ResourceTable caption="Course catalog" columns={columns} rows={filtered} getRowKey={(course) => course.courseId} actions={(course) => (
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`Edit ${course.courseCode}`} title="Edit course" onClick={() => { setEditing(course); setFormOpen(true) }}><Pencil size={16} /></Button>

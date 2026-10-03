@@ -10,11 +10,13 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
 import { RecordDetailsDialog } from '../admin-shared/RecordDetailsDialog'
 import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
+import { formatDate } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { getStudents, studentKeys } from '../students/students.api'
 import { EnrollmentFormDialog } from './EnrollmentFormDialog'
@@ -52,7 +54,7 @@ export function EnrollmentsPage() {
     { key: 'student', header: 'Student', render: (enrollment: EnrollmentResponse) => { const student = studentById.get(enrollment.studentId); return <div className="identity-cell"><span className="identity-avatar identity-avatar--teal" aria-hidden="true">{student?.firstName?.slice(0, 1) ?? '—'}</span><span><strong>{student ? `${student.firstName} ${student.lastName ?? ''}` : `Student #${enrollment.studentId}`}</strong><small>{student?.enrollmentNumber ?? 'Enrollment profile unavailable'}</small></span></div> } },
     { key: 'course', header: 'Course', render: (enrollment: EnrollmentResponse) => { const course = courseById.get(enrollment.courseId); return <span><strong>{course?.courseCode ?? `Course #${enrollment.courseId}`}</strong><small className="cell-subtext">{course?.courseName ?? 'Course details unavailable'}</small></span> } },
     { key: 'term', header: 'Term', render: (enrollment: EnrollmentResponse) => `${enrollment.semester} · ${enrollment.academicYear}` },
-    { key: 'date', header: 'Enrolled', mobileHidden: true, render: (enrollment: EnrollmentResponse) => enrollment.enrollmentDate || <span className="muted">—</span> },
+    { key: 'date', header: 'Enrolled', mobileHidden: true, render: (enrollment: EnrollmentResponse) => formatDate(enrollment.enrollmentDate) ?? <span className="muted">—</span> },
     { key: 'status', header: 'Status', render: (enrollment: EnrollmentResponse) => <StatusBadge status={enrollment.status} /> },
   ]
 
@@ -61,7 +63,7 @@ export function EnrollmentsPage() {
       <PageHeader eyebrow="Academic operations" title="Enrollments" description="Review course registrations and create new student-course enrollments." action={<Button onClick={() => setFormOpen(true)} disabled={students.isPending || students.isError || courses.isPending || courses.isError}><Plus size={17} aria-hidden="true" /> Create enrollment</Button>} />
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${enrollments.data?.totalElements ?? 0} total`} filters={<SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ENROLLED">Enrolled</option><option value="DROPPED">Dropped</option><option value="COMPLETED">Completed</option></SelectField>} />
-        {enrollments.isPending ? <LoadingState label="Loading enrollments" /> : enrollments.isError ? <ErrorState error={enrollments.error} onRetry={() => void enrollments.refetch()} /> : filtered.length === 0 ? <EmptyState title={enrollments.data.totalElements ? 'No enrollments on this page match' : 'No enrollments yet'} description={enrollments.data.totalElements ? 'Try another search, status or page.' : 'Create an enrollment from an active student and active course.'} /> : (
+        {enrollments.isPending ? <TableSkeleton rows={8} columns={5} label="Loading enrollments" /> : enrollments.isError ? <ErrorState error={enrollments.error} onRetry={() => void enrollments.refetch()} /> : filtered.length === 0 ? <EmptyState title={enrollments.data.totalElements ? 'No enrollments on this page match' : 'No enrollments yet'} description={enrollments.data.totalElements ? 'Try another search, status or page.' : 'Create an enrollment from an active student and active course.'} /> : (
           <ResourceTable caption="Enrollment directory" columns={columns} rows={filtered} getRowKey={(enrollment) => enrollment.enrollmentId} actions={(enrollment) => <Button size="sm" variant="ghost" title="View enrollment details" aria-label={`View enrollment ${enrollment.enrollmentId}`} onClick={() => setViewing(enrollment)}><Eye size={16} /></Button>} />
         )}
         {!enrollments.isPending && !enrollments.isError && enrollments.data && <PaginationControls page={enrollments.data.page} size={enrollments.data.size} totalElements={enrollments.data.totalElements} totalPages={enrollments.data.totalPages} onPageChange={setPage} />}
@@ -73,7 +75,7 @@ export function EnrollmentsPage() {
         { label: 'Student', value: studentById.get(detail.data?.studentId ?? viewing.studentId)?.enrollmentNumber ?? `Student #${detail.data?.studentId ?? viewing.studentId}` },
         { label: 'Course', value: courseById.get(detail.data?.courseId ?? viewing.courseId)?.courseCode ?? `Course #${detail.data?.courseId ?? viewing.courseId}` },
         { label: 'Semester', value: detail.data?.semester ?? viewing.semester }, { label: 'Academic year', value: detail.data?.academicYear ?? viewing.academicYear },
-        { label: 'Enrollment date', value: detail.data?.enrollmentDate ?? viewing.enrollmentDate }, { label: 'Status', value: detail.data?.status ?? viewing.status },
+        { label: 'Enrollment date', value: formatDate(detail.data?.enrollmentDate ?? viewing.enrollmentDate) ?? '—' }, { label: 'Status', value: detail.data?.status ?? viewing.status },
       ]} />}
     </div>
   )
