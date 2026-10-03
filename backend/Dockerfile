@@ -18,13 +18,10 @@ WORKDIR /app
 RUN groupadd --system --gid 10001 campuscore \
     && useradd --system --uid 10001 --gid campuscore --home-dir /app --shell /usr/sbin/nologin campuscore
 
-# Copy the packaged application regardless of the project version.
 COPY --from=build --chown=campuscore:campuscore /workspace/target/*.jar /app/app.jar
 
 USER campuscore
 EXPOSE 8080
 
-# Size the heap from the container memory limit instead of host memory. 60% is
-# used so metaspace, code cache and thread stacks still fit inside the 512 MB
-# free-tier container; raise it on larger instances.
+# Keep the JVM heap below Render's 512 MiB free container limit.
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
