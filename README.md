@@ -13,12 +13,12 @@ These browser screenshots use synthetic demo identities and records. They are de
 | View | Screenshot |
 | --- | --- |
 | Login | ![CampusCore login](docs/screenshots/login.png) |
-| Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/admin-dashboard.png) |
-| Student profile | ![Student profile with synthetic demo identity](docs/screenshots/student-directory.png) |
-| Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/course-catalog.png) |
-| Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/student-workspace.png) |
-| Faculty workspace | ![Faculty workspace with synthetic demo identity](docs/screenshots/faculty-workspace.png) |
-| Access management | ![User accounts with role and status filters](docs/screenshots/users.png) |
+| Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/Admin%20Dashboard.png) |
+| Student profile | ![Student profile with synthetic demo identity](docs/screenshots/Student%20Dashboard.png) |
+| Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/Course%20Catalog.png) |
+| Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/Student%20Dashboard.png) |
+| Faculty workspace | ![Faculty workspace with synthetic demo identity](docs/screenshots/Faculty%20Dashboard.png) |
+| Access management | ![User accounts with role and status filters](docs/screenshots/Users.png) |
 
 Do not capture real personal records, credentials, or tokens.
 
