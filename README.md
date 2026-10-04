@@ -16,7 +16,7 @@ These browser screenshots use synthetic demo identities and records. They are de
 
 | View | Screenshot |
 | --- | --- |
-| Login | ![CampusCore login](docs/screenshots/Login.png) |
+| Login | ![CampusCore login](docs/screenshots/login.png) |
 | Admin dashboard | ![Admin dashboard with synthetic demo data](docs/screenshots/Admin%20Dashboard.png) |
 | Course catalog | ![Course catalog with synthetic demo courses](docs/screenshots/Course%20Catalog.png) |
 | Student workspace | ![Student workspace with synthetic academic data](docs/screenshots/Student%20Dashboard.png) |
