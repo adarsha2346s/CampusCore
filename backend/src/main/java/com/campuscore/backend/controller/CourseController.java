@@ -67,6 +67,28 @@ public class CourseController {
         );
     }
 
+    // GET course dependencies
+    @GetMapping("/{id}/dependencies")
+    public ResponseEntity<com.campuscore.backend.dto.ResourceDependencySummary> getCourseDependencies(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                courseService.getCourseDependencies(id)
+        );
+    }
+
+    // DEACTIVATE course
+    @PostMapping("/{id}/deactivate")
+    public ResponseEntity<CourseResponse> deactivateCourse(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                toResponse(
+                        courseService.deactivateCourse(id)
+                )
+        );
+    }
+
     // CREATE course
     @PostMapping
     public ResponseEntity<?> createCourse(

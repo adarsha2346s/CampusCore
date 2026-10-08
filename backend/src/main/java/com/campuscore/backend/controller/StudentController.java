@@ -95,6 +95,15 @@ public class StudentController {
         return ResponseEntity.ok(toResponse(student));
     }
 
+    @GetMapping("/{id}/dependencies")
+    public ResponseEntity<com.campuscore.backend.dto.ResourceDependencySummary> getStudentDependencies(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                studentService.getStudentDependencies(id)
+        );
+    }
+
     private boolean isOwnStudent(
             Authentication authentication,
             Long studentId) {

@@ -22,4 +22,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @EntityGraph(attributePaths = "department")
     Optional<Student> findByUserUserId(Long userId);
+
+    long countByDepartmentDepartmentId(Long departmentId);
 }

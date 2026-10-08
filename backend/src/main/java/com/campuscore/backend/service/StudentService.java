@@ -1,19 +1,26 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.dto.ResourceDependencySummary;
 import com.campuscore.backend.dto.StudentRequest;
 import com.campuscore.backend.entity.Department;
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
+import com.campuscore.backend.exception.ResourceConflictException;
+import com.campuscore.backend.exception.ResourceNotFoundException;
 import com.campuscore.backend.repository.DepartmentRepository;
+import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class StudentService {
@@ -21,15 +28,26 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final EnrollmentRepository enrollmentRepository;
+
+    @Autowired
+    public StudentService(
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            EnrollmentRepository enrollmentRepository) {
+
+        this.studentRepository = studentRepository;
+        this.userRepository = userRepository;
+        this.departmentRepository = departmentRepository;
+        this.enrollmentRepository = enrollmentRepository;
+    }
 
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository) {
-
-        this.studentRepository = studentRepository;
-        this.userRepository = userRepository;
-        this.departmentRepository = departmentRepository;
+        this(studentRepository, userRepository, departmentRepository, null);
     }
 
     // Get all students
@@ -44,7 +62,7 @@ public class StudentService {
     // Get student by ID
     public Student getStudentById(Long id) {
         return studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
     }
 
     public Student getStudentForUsername(String username) {
@@ -67,31 +85,31 @@ public class StudentService {
         if (studentRepository.existsByEnrollmentNumber(
                 request.getEnrollmentNumber())) {
 
-            throw new RuntimeException(
-                    "Enrollment number already exists"
+            throw new ResourceConflictException(
+                    "Enrollment number already exists: " + request.getEnrollmentNumber()
             );
         }
 
         if (studentRepository.existsByUserUserId(
                 request.getUserId())) {
 
-            throw new RuntimeException(
-                    "This user is already linked to a student"
+            throw new ResourceConflictException(
+                    "This user is already linked to a student account"
             );
         }
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found with ID: " + request.getUserId()));
 
         Department department =
                 departmentRepository.findById(request.getDepartmentId())
                         .orElseThrow(() ->
-                                new RuntimeException("Department not found"));
+                                new ResourceNotFoundException("Department not found with ID: " + request.getDepartmentId()));
 
         if (user.getRole() != User.Role.STUDENT) {
-            throw new RuntimeException(
-                    "User role must be STUDENT"
+            throw new IllegalArgumentException(
+                    "User role must be STUDENT to link a student profile"
             );
         }
 
@@ -119,14 +137,32 @@ public class StudentService {
 
         Student existingStudent = getStudentById(id);
 
+        if (!existingStudent.getEnrollmentNumber().equals(request.getEnrollmentNumber())
+                && studentRepository.existsByEnrollmentNumber(
+                        request.getEnrollmentNumber())) {
+
+            throw new ResourceConflictException(
+                    "Enrollment number already exists: " + request.getEnrollmentNumber()
+            );
+        }
+
+        if (!existingStudent.getUser().getUserId().equals(request.getUserId())
+                && studentRepository.existsByUserUserId(
+                        request.getUserId())) {
+
+            throw new ResourceConflictException(
+                    "This user is already linked to a student account"
+            );
+        }
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found with ID: " + request.getUserId()));
 
         Department department =
                 departmentRepository.findById(request.getDepartmentId())
                         .orElseThrow(() ->
-                                new RuntimeException("Department not found"));
+                                new ResourceNotFoundException("Department not found with ID: " + request.getDepartmentId()));
 
         existingStudent.setUser(user);
         existingStudent.setDepartment(department);
@@ -142,13 +178,54 @@ public class StudentService {
         return studentRepository.save(existingStudent);
     }
 
-    // Deactivate student
-    public void deactivateStudent(Long id) {
-
+    // Get dependency summary
+    public ResourceDependencySummary getStudentDependencies(Long id) {
         Student student = getStudentById(id);
+        long enrollments = enrollmentRepository != null ? enrollmentRepository.countByStudentStudentId(id) : 0;
 
+        Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("enrollments", enrollments);
+
+        boolean hasDependencies = (enrollments > 0);
+        boolean canDelete = !hasDependencies;
+        boolean canArchive = true; // Student has status ACTIVE, INACTIVE, GRADUATED
+
+        String message = canDelete
+                ? "Student has no academic enrollments and can be safely deleted."
+                : String.format("Student has %d academic enrollment(s). Deactivate student status instead of deleting.", enrollments);
+
+        return new ResourceDependencySummary("STUDENT", id, canDelete, canArchive, counts, message);
+    }
+
+    // Deactivate student
+    public Student deactivateStudent(Long id) {
+        Student student = getStudentById(id);
         student.setStatus(Student.Status.INACTIVE);
+        return studentRepository.save(student);
+    }
 
-        studentRepository.save(student);
+    // Delete student
+    public void deleteStudent(Long id) {
+        Student student = getStudentById(id);
+        requireVerifiableDependencies();
+        ResourceDependencySummary deps = getStudentDependencies(id);
+        if (!deps.isCanDelete()) {
+            throw new ResourceConflictException(deps.getMessage());
+        }
+        studentRepository.delete(student);
+    }
+
+    /**
+     * Fail closed. Enrollments carry grades and attendance, so an absent
+     * enrollment repository must never be mistaken for "this student has no
+     * academic history".
+     */
+    private void requireVerifiableDependencies() {
+        if (enrollmentRepository == null) {
+
+            throw new ResourceConflictException(
+                    "Academic enrollments cannot be verified, so this student cannot be deleted. "
+                            + "Deactivate the student instead to preserve academic history.");
+        }
     }
 }

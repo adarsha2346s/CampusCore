@@ -11,4 +11,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     @Override
     @EntityGraph(attributePaths = "department")
     Page<Course> findAll(Pageable pageable);
+
+    long countByDepartmentDepartmentId(Long departmentId);
 }

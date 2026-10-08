@@ -2,11 +2,15 @@ package com.campuscore.backend.service;
 
 import com.campuscore.backend.dto.UserRequest;
 import com.campuscore.backend.entity.User;
+import com.campuscore.backend.exception.ResourceConflictException;
+import com.campuscore.backend.exception.ResourceNotFoundException;
 import com.campuscore.backend.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -47,7 +51,7 @@ public class UserService {
 
         return userRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found with ID: " + id));
     }
 
     // =========================
@@ -56,11 +60,11 @@ public class UserService {
     public User createUser(UserRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new ResourceConflictException("Username already exists: " + request.getUsername());
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ResourceConflictException("Email already exists: " + request.getEmail());
         }
 
         // Get the currently authenticated admin
@@ -192,16 +196,18 @@ public class UserService {
                 || !authentication.isAuthenticated()
                 || authentication.getName() == null) {
 
-            throw new RuntimeException(
-                    "Authenticated user not found"
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication is required"
             );
         }
 
         return userRepository
                 .findByUsername(authentication.getName())
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Authenticated user not found"
+                        new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Authenticated account could not be resolved"
                         )
                 );
     }

@@ -141,6 +141,24 @@ public class FacultyController {
                 .body(toResponse(faculty));
     }
 
+    @GetMapping("/{id}/dependencies")
+    public ResponseEntity<com.campuscore.backend.dto.ResourceDependencySummary> getFacultyDependencies(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                facultyService.getFacultyDependencies(id)
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deactivateFaculty(
+            @PathVariable Long id) {
+
+        facultyService.deactivateFaculty(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
     private FacultyResponse toResponse(Faculty faculty) {
 
         return new FacultyResponse(

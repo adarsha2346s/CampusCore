@@ -36,4 +36,8 @@ public interface AttendanceSessionRepository
             Long courseId,
             LocalDate sessionDate
     );
+
+    long countByCourseCourseId(Long courseId);
+
+    long countByFacultyFacultyId(Long facultyId);
 }

@@ -18,4 +18,6 @@ public interface AssessmentRepository extends JpaRepository<Assessment, Long> {
     Page<Assessment> findByCourseCourseId(Long courseId, Pageable pageable);
 
     List<Assessment> findByCourseCourseId(Long courseId);
+
+    long countByCourseCourseId(Long courseId);
 }

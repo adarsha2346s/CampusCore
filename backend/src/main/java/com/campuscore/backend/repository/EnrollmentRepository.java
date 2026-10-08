@@ -24,4 +24,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
             String semester,
             String academicYear
     );
+
+    long countByCourseCourseId(Long courseId);
+
+    long countByStudentStudentId(Long studentId);
 }

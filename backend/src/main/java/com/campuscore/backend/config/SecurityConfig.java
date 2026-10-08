@@ -272,6 +272,17 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+                        // Only ADMIN can change course lifecycle status.
+                        // This sub-path previously matched no course rule, so it
+                        // fell through to anyRequest().authenticated() and let
+                        // any signed-in user (including STUDENT) deactivate a
+                        // course. "*" matches exactly the {id} segment.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/courses/*/deactivate"
+                        )
+                        .hasRole("ADMIN")
+
                         // Only ADMIN can update courses
                         .requestMatchers(
                                 HttpMethod.PUT,

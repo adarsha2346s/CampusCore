@@ -41,6 +41,16 @@ public class DepartmentController {
         );
     }
 
+    // GET department dependencies
+    @GetMapping("/{id}/dependencies")
+    public ResponseEntity<com.campuscore.backend.dto.ResourceDependencySummary> getDepartmentDependencies(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                departmentService.getDepartmentDependencies(id)
+        );
+    }
+
     // CREATE department
     @PostMapping
     public ResponseEntity<?> createDepartment(

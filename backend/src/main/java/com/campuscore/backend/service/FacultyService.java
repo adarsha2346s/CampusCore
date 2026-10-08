@@ -1,18 +1,25 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.dto.ResourceDependencySummary;
 import com.campuscore.backend.entity.Department;
 import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.entity.User;
+import com.campuscore.backend.exception.ResourceConflictException;
+import com.campuscore.backend.exception.ResourceNotFoundException;
+import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.DepartmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FacultyService {
@@ -20,15 +27,26 @@ public class FacultyService {
     private final FacultyRepository facultyRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final AttendanceSessionRepository attendanceSessionRepository;
+
+    @Autowired
+    public FacultyService(
+            FacultyRepository facultyRepository,
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            AttendanceSessionRepository attendanceSessionRepository) {
+
+        this.facultyRepository = facultyRepository;
+        this.userRepository = userRepository;
+        this.departmentRepository = departmentRepository;
+        this.attendanceSessionRepository = attendanceSessionRepository;
+    }
 
     public FacultyService(
             FacultyRepository facultyRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository) {
-
-        this.facultyRepository = facultyRepository;
-        this.userRepository = userRepository;
-        this.departmentRepository = departmentRepository;
+        this(facultyRepository, userRepository, departmentRepository, null);
     }
 
     public List<Faculty> getAllFaculty() {
@@ -41,7 +59,7 @@ public class FacultyService {
 
     public Faculty getFacultyById(Long id) {
         return facultyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Faculty not found with ID: " + id));
     }
 
     public Faculty getFacultyForUsername(String username) {
@@ -67,23 +85,23 @@ public class FacultyService {
             String phone) {
 
         if (facultyRepository.existsByEmployeeNumber(employeeNumber)) {
-            throw new RuntimeException("Employee number already exists");
+            throw new ResourceConflictException("Employee number already exists: " + employeeNumber);
         }
 
         if (facultyRepository.existsByUserUserId(userId)) {
-            throw new RuntimeException(
-                    "This user is already linked to a faculty"
+            throw new ResourceConflictException(
+                    "This user is already linked to a faculty account"
             );
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
 
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new RuntimeException("Department not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + departmentId));
 
         if (user.getRole() != User.Role.FACULTY) {
-            throw new RuntimeException("User role must be FACULTY");
+            throw new IllegalArgumentException("User role must be FACULTY to link a faculty profile");
         }
 
         Faculty faculty = new Faculty();
@@ -97,5 +115,52 @@ public class FacultyService {
         faculty.setStatus(Faculty.Status.ACTIVE);
 
         return facultyRepository.save(faculty);
+    }
+
+    public ResourceDependencySummary getFacultyDependencies(Long id) {
+        Faculty faculty = getFacultyById(id);
+        long sessions = attendanceSessionRepository != null ? attendanceSessionRepository.countByFacultyFacultyId(id) : 0;
+
+        Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("attendanceSessions", sessions);
+
+        boolean hasDependencies = (sessions > 0);
+        boolean canDelete = !hasDependencies;
+        boolean canArchive = true; // Faculty has status ACTIVE, INACTIVE
+
+        String message = canDelete
+                ? "Faculty member has no recorded attendance sessions and can be safely deleted."
+                : String.format("Faculty member has %d recorded attendance session(s). Deactivate faculty status instead of deleting.", sessions);
+
+        return new ResourceDependencySummary("FACULTY", id, canDelete, canArchive, counts, message);
+    }
+
+    public Faculty deactivateFaculty(Long id) {
+        Faculty faculty = getFacultyById(id);
+        faculty.setStatus(Faculty.Status.INACTIVE);
+        return facultyRepository.save(faculty);
+    }
+
+    public void deleteFaculty(Long id) {
+        Faculty faculty = getFacultyById(id);
+        requireVerifiableDependencies();
+        ResourceDependencySummary deps = getFacultyDependencies(id);
+        if (!deps.isCanDelete()) {
+            throw new ResourceConflictException(deps.getMessage());
+        }
+        facultyRepository.delete(faculty);
+    }
+
+    /**
+     * Fail closed. Attendance sessions are the faculty member's teaching record,
+     * so an absent repository must never be mistaken for "no sessions recorded".
+     */
+    private void requireVerifiableDependencies() {
+        if (attendanceSessionRepository == null) {
+
+            throw new ResourceConflictException(
+                    "Recorded attendance sessions cannot be verified, so this faculty member cannot be deleted. "
+                            + "Deactivate the faculty member instead to preserve the teaching record.");
+        }
     }
 }
