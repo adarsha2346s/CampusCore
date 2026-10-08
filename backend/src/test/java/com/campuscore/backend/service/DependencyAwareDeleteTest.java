@@ -10,6 +10,7 @@ import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.DepartmentRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
+import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
@@ -39,6 +40,8 @@ class DependencyAwareDeleteTest {
         EnrollmentRepository enrollments = mock(EnrollmentRepository.class);
         AssessmentRepository assessments = mock(AssessmentRepository.class);
         AttendanceSessionRepository sessions = mock(AttendanceSessionRepository.class);
+        FacultyCourseAssignmentRepository assignments =
+                mock(FacultyCourseAssignmentRepository.class);
 
         Course course = new Course();
         course.setCourseId(11L);
@@ -46,7 +49,7 @@ class DependencyAwareDeleteTest {
         when(enrollments.countByCourseCourseId(11L)).thenReturn(3L);
 
         CourseService service =
-                new CourseService(courses, enrollments, assessments, sessions);
+                new CourseService(courses, enrollments, assessments, sessions, assignments);
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(course);
@@ -58,6 +61,8 @@ class DependencyAwareDeleteTest {
         EnrollmentRepository enrollments = mock(EnrollmentRepository.class);
         AssessmentRepository assessments = mock(AssessmentRepository.class);
         AttendanceSessionRepository sessions = mock(AttendanceSessionRepository.class);
+        FacultyCourseAssignmentRepository assignments =
+                mock(FacultyCourseAssignmentRepository.class);
 
         Course course = new Course();
         course.setCourseId(11L);
@@ -65,7 +70,7 @@ class DependencyAwareDeleteTest {
         when(assessments.countByCourseCourseId(11L)).thenReturn(1L);
 
         CourseService service =
-                new CourseService(courses, enrollments, assessments, sessions);
+                new CourseService(courses, enrollments, assessments, sessions, assignments);
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(course);
@@ -119,7 +124,8 @@ class DependencyAwareDeleteTest {
 
         FacultyService service = new FacultyService(
                 facultyRepository, mock(UserRepository.class),
-                mock(DepartmentRepository.class), sessions);
+                mock(DepartmentRepository.class), sessions,
+                mock(FacultyCourseAssignmentRepository.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(9L));
         verify(facultyRepository, never()).delete(faculty);
@@ -140,7 +146,8 @@ class DependencyAwareDeleteTest {
         CourseService service = new CourseService(courses,
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
-                mock(AttendanceSessionRepository.class));
+                mock(AttendanceSessionRepository.class),
+                mock(FacultyCourseAssignmentRepository.class));
 
         service.deleteCourse(11L);
 

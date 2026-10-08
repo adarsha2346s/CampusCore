@@ -2,6 +2,7 @@ package com.campuscore.backend.controller;
 
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
+import com.campuscore.backend.service.FacultyCourseAssignmentService;
 import com.campuscore.backend.service.FacultyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,8 @@ class FacultySelfAccessTest {
     void nonFacultyCannotUseFacultySelfEndpoint() {
         FacultyService service = mock(FacultyService.class);
         FacultyController controller = new FacultyController(
-                service, mock(UserRepository.class), mock(FacultyRepository.class));
+                service, mock(UserRepository.class), mock(FacultyRepository.class),
+                mock(FacultyCourseAssignmentService.class));
         var authentication = new UsernamePasswordAuthenticationToken(
                 "admin-account", "", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 

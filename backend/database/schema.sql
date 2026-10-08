@@ -92,6 +92,33 @@ CREATE TABLE course (
                                 ON DELETE RESTRICT
 );
 
+-- Normalised faculty <-> course assignment.
+-- A faculty member may teach many courses and a course may be co-taught.
+-- ended_at IS NULL means the assignment is current; a reassignment closes the
+-- previous row instead of deleting it, so teaching history survives.
+-- Deliberately no UNIQUE(course_id, faculty_id): a faculty member must be able
+-- to return to the same course later. Duplicate *active* assignments are
+-- prevented by the service layer instead.
+-- Nothing here references academic history, so existing enrollments,
+-- assessments, marks and attendance records stay valid and untouched.
+CREATE TABLE faculty_course_assignment (
+                                         assignment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                         course_id BIGINT NOT NULL,
+                                         faculty_id BIGINT NOT NULL,
+                                         assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                         ended_at TIMESTAMP NULL,
+
+                                         CONSTRAINT fk_assignment_course
+                                             FOREIGN KEY (course_id)
+                                                 REFERENCES course(course_id)
+                                                 ON DELETE RESTRICT,
+
+                                         CONSTRAINT fk_assignment_faculty
+                                             FOREIGN KEY (faculty_id)
+                                                 REFERENCES faculty(faculty_id)
+                                                 ON DELETE RESTRICT
+);
+
 CREATE TABLE enrollment (
                             enrollment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
                             student_id BIGINT NOT NULL,
@@ -235,6 +262,12 @@ CREATE INDEX idx_faculty_department
 
 CREATE INDEX idx_course_department
     ON course(department_id);
+
+CREATE INDEX idx_assignment_course
+    ON faculty_course_assignment(course_id);
+
+CREATE INDEX idx_assignment_faculty
+    ON faculty_course_assignment(faculty_id);
 
 CREATE INDEX idx_enrollment_student
     ON enrollment(student_id);

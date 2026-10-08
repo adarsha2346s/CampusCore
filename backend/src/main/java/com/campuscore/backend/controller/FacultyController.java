@@ -8,6 +8,7 @@ import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
+import com.campuscore.backend.service.FacultyCourseAssignmentService;
 import com.campuscore.backend.service.FacultyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,15 +25,18 @@ public class FacultyController {
     private final FacultyService facultyService;
     private final UserRepository userRepository;
     private final FacultyRepository facultyRepository;
+    private final FacultyCourseAssignmentService facultyCourseAssignmentService;
 
     public FacultyController(
             FacultyService facultyService,
             UserRepository userRepository,
-            FacultyRepository facultyRepository) {
+            FacultyRepository facultyRepository,
+            FacultyCourseAssignmentService facultyCourseAssignmentService) {
 
         this.facultyService = facultyService;
         this.userRepository = userRepository;
         this.facultyRepository = facultyRepository;
+        this.facultyCourseAssignmentService = facultyCourseAssignmentService;
     }
 
     @GetMapping("/me")
@@ -147,6 +151,16 @@ public class FacultyController {
 
         return ResponseEntity.ok(
                 facultyService.getFacultyDependencies(id)
+        );
+    }
+
+    // GET courses currently assigned to this faculty member
+    @GetMapping("/{id}/courses")
+    public ResponseEntity<List<com.campuscore.backend.dto.FacultyAssignmentResponse>>
+            getFacultyCourses(@PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                facultyCourseAssignmentService.getActiveAssignmentsForFaculty(id)
         );
     }
 

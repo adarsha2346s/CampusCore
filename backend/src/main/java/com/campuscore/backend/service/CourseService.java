@@ -8,6 +8,7 @@ import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
+import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -24,21 +25,24 @@ public class CourseService {
     private final EnrollmentRepository enrollmentRepository;
     private final AssessmentRepository assessmentRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final FacultyCourseAssignmentRepository facultyCourseAssignmentRepository;
 
     @Autowired
     public CourseService(
             CourseRepository courseRepository,
             EnrollmentRepository enrollmentRepository,
             AssessmentRepository assessmentRepository,
-            AttendanceSessionRepository attendanceSessionRepository) {
+            AttendanceSessionRepository attendanceSessionRepository,
+            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository) {
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.assessmentRepository = assessmentRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
+        this.facultyCourseAssignmentRepository = facultyCourseAssignmentRepository;
     }
 
     public CourseService(CourseRepository courseRepository) {
-        this(courseRepository, null, null, null);
+        this(courseRepository, null, null, null, null);
     }
 
     // Get all courses
@@ -85,20 +89,24 @@ public class CourseService {
         long enrollments = enrollmentRepository != null ? enrollmentRepository.countByCourseCourseId(id) : 0;
         long assessments = assessmentRepository != null ? assessmentRepository.countByCourseCourseId(id) : 0;
         long sessions = attendanceSessionRepository != null ? attendanceSessionRepository.countByCourseCourseId(id) : 0;
+        long assignments = facultyCourseAssignmentRepository != null
+                ? facultyCourseAssignmentRepository.countByCourseCourseId(id) : 0;
 
         Map<String, Long> counts = new LinkedHashMap<>();
         counts.put("enrollments", enrollments);
         counts.put("assessments", assessments);
         counts.put("attendanceSessions", sessions);
+        counts.put("facultyAssignments", assignments);
 
-        boolean hasDependencies = (enrollments > 0 || assessments > 0 || sessions > 0);
+        boolean hasDependencies =
+                (enrollments > 0 || assessments > 0 || sessions > 0 || assignments > 0);
         boolean canDelete = !hasDependencies;
         boolean canArchive = true; // Course has status ACTIVE/INACTIVE
 
         String message = canDelete
                 ? "Course has no dependent records and can be safely deleted."
-                : String.format("Course has %d enrollment(s), %d assessment(s), and %d attendance session(s). Deactivate or archive it instead of deleting.",
-                enrollments, assessments, sessions);
+                : String.format("Course has %d enrollment(s), %d assessment(s), %d attendance session(s), and %d faculty assignment(s). Deactivate or archive it instead of deleting.",
+                enrollments, assessments, sessions, assignments);
 
         return new ResourceDependencySummary("COURSE", id, canDelete, canArchive, counts, message);
     }
@@ -129,7 +137,8 @@ public class CourseService {
     private void requireVerifiableDependencies() {
         if (enrollmentRepository == null
                 || assessmentRepository == null
-                || attendanceSessionRepository == null) {
+                || attendanceSessionRepository == null
+                || facultyCourseAssignmentRepository == null) {
 
             throw new ResourceConflictException(
                     "Dependent records cannot be verified, so this course cannot be deleted. "

@@ -297,6 +297,17 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+                        // Faculty-to-course assignment writes. Reads are already
+                        // covered by the course read rule above, and PUT/DELETE are
+                        // already covered by the course PUT/DELETE rules, so only the
+                        // POST sub-path needs its own entry: "POST /api/v1/courses"
+                        // is an exact-path match and does not reach this sub-path.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/courses/*/faculty-assignments"
+                        )
+                        .hasRole("ADMIN")
+
                         // =========================
                         // ENROLLMENT MANAGEMENT
                         // =========================

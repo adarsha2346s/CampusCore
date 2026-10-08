@@ -8,6 +8,7 @@ import com.campuscore.backend.exception.ResourceConflictException;
 import com.campuscore.backend.exception.ResourceNotFoundException;
 import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.DepartmentRepository;
+import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,25 +29,28 @@ public class FacultyService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final FacultyCourseAssignmentRepository facultyCourseAssignmentRepository;
 
     @Autowired
     public FacultyService(
             FacultyRepository facultyRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
-            AttendanceSessionRepository attendanceSessionRepository) {
+            AttendanceSessionRepository attendanceSessionRepository,
+            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository) {
 
         this.facultyRepository = facultyRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
+        this.facultyCourseAssignmentRepository = facultyCourseAssignmentRepository;
     }
 
     public FacultyService(
             FacultyRepository facultyRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository) {
-        this(facultyRepository, userRepository, departmentRepository, null);
+        this(facultyRepository, userRepository, departmentRepository, null, null);
     }
 
     public List<Faculty> getAllFaculty() {
@@ -120,17 +124,20 @@ public class FacultyService {
     public ResourceDependencySummary getFacultyDependencies(Long id) {
         Faculty faculty = getFacultyById(id);
         long sessions = attendanceSessionRepository != null ? attendanceSessionRepository.countByFacultyFacultyId(id) : 0;
+        long assignments = facultyCourseAssignmentRepository != null
+                ? facultyCourseAssignmentRepository.countByFacultyFacultyId(id) : 0;
 
         Map<String, Long> counts = new LinkedHashMap<>();
         counts.put("attendanceSessions", sessions);
+        counts.put("courseAssignments", assignments);
 
-        boolean hasDependencies = (sessions > 0);
+        boolean hasDependencies = (sessions > 0 || assignments > 0);
         boolean canDelete = !hasDependencies;
         boolean canArchive = true; // Faculty has status ACTIVE, INACTIVE
 
         String message = canDelete
-                ? "Faculty member has no recorded attendance sessions and can be safely deleted."
-                : String.format("Faculty member has %d recorded attendance session(s). Deactivate faculty status instead of deleting.", sessions);
+                ? "Faculty member has no recorded attendance sessions or course assignments and can be safely deleted."
+                : String.format("Faculty member has %d recorded attendance session(s) and %d course assignment(s). Deactivate faculty status instead of deleting.", sessions, assignments);
 
         return new ResourceDependencySummary("FACULTY", id, canDelete, canArchive, counts, message);
     }
@@ -156,10 +163,11 @@ public class FacultyService {
      * so an absent repository must never be mistaken for "no sessions recorded".
      */
     private void requireVerifiableDependencies() {
-        if (attendanceSessionRepository == null) {
+        if (attendanceSessionRepository == null || facultyCourseAssignmentRepository == null) {
 
             throw new ResourceConflictException(
-                    "Recorded attendance sessions cannot be verified, so this faculty member cannot be deleted. "
+                    "Recorded attendance sessions and course assignments cannot be verified, "
+                            + "so this faculty member cannot be deleted. "
                             + "Deactivate the faculty member instead to preserve the teaching record.");
         }
     }
