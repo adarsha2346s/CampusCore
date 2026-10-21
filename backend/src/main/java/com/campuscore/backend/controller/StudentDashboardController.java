@@ -5,7 +5,9 @@ import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
+import com.campuscore.backend.service.AccessScope;
 import com.campuscore.backend.service.StudentDashboardService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,70 +20,38 @@ public class StudentDashboardController {
     private final StudentDashboardService studentDashboardService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final AccessScope accessScope;
 
     public StudentDashboardController(
             StudentDashboardService studentDashboardService,
             UserRepository userRepository,
             StudentRepository studentRepository) {
 
+        this(studentDashboardService, userRepository, studentRepository, null);
+    }
+
+        @Autowired
+    public StudentDashboardController(
+            StudentDashboardService studentDashboardService,
+            UserRepository userRepository,
+            StudentRepository studentRepository,
+            AccessScope accessScope) {
+
         this.studentDashboardService = studentDashboardService;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
+        this.accessScope = accessScope;
     }
 
     @GetMapping("/{studentId}")
     public ResponseEntity<StudentDashboardResponse> getStudentDashboard(
-            @PathVariable Long studentId,
-            Authentication authentication) {
+            @PathVariable Long studentId) {
 
-        /*
-         * Get the currently authenticated username
-         * from the JWT/SecurityContext.
-         */
-        String username = authentication.getName();
-
-        /*
-         * Only students should use this endpoint.
-         */
-        boolean isStudent = authentication.getAuthorities()
-                .stream()
-                .anyMatch(authority ->
-                        authority.getAuthority().equals("ROLE_STUDENT"));
-
-        if (!isStudent) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .build();
-        }
-
-        /*
-         * Find the logged-in user's database record.
-         */
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new RuntimeException("Authenticated user not found")
-                );
-
-        /*
-         * Find the student record linked to this user.
-         */
-        Student student = studentRepository
-                .findByUserUserId(user.getUserId())
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Student record not found for authenticated user"
-                        )
-                );
-
-        /*
-         * Prevent a student from requesting
-         * another student's dashboard.
-         */
-        if (!student.getStudentId().equals(studentId)) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .build();
-        }
+        // ADMIN, FACULTY and STUDENT may reach the dashboard route, so the role is
+        // enforced by the request matcher and the ownership by AccessScope: an
+        // administrator sees any student, faculty only students they teach, and a
+        // student only their own dashboard.
+        accessScope.requireStudentAccess(studentId);
 
         return ResponseEntity.ok(
                 studentDashboardService.getStudentDashboard(studentId)

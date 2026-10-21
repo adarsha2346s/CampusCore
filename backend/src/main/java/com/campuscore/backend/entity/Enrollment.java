@@ -52,7 +52,26 @@ public class Enrollment {
     @Column(nullable = false)
     private Status status = Status.ENROLLED;
 
+    /**
+     * Optimistic locking version.
+     *
+     * <p>Status and term changes decide how a student's academic history is
+     * counted, so a stale write must be rejected rather than silently reverting a
+     * withdrawal or a term correction.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     public Enrollment() {
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Long getEnrollmentId() {

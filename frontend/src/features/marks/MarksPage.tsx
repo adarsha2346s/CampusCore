@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Plus } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
@@ -10,6 +10,7 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -21,7 +22,18 @@ import { getCourses } from '../courses/courses.api'
 import { getEnrollments } from '../enrollments/enrollments.api'
 import { getStudents } from '../students/students.api'
 import { MarkFormDialog } from './MarkFormDialog'
-import { createMark, getMark, getMarksPage, getMarksByAssessmentPage, getMarksByEnrollmentPage, markKeys } from './marks.api'
+import { MarkEditDialog } from './MarkEditDialog'
+import {
+  createMark,
+  deleteMark,
+  getMark,
+  getMarksPage,
+  getMarksByAssessmentPage,
+  getMarksByEnrollmentPage,
+  markKeys,
+  updateMark,
+} from './marks.api'
+import type { MarkUpdateRequest } from './marks.api'
 import type { MarkResponse } from '../../types/api'
 
 export function MarksPage() {
@@ -32,6 +44,7 @@ export function MarksPage() {
   const [enrollmentId, setEnrollmentId] = useState('ALL')
   const [assessmentId, setAssessmentId] = useState('ALL')
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<MarkResponse | null>(null)
   const [viewing, setViewing] = useState<MarkResponse | null>(null)
   const marks = useQuery({
     queryKey: markKeys.filteredPage(page, pageSize, enrollmentId, assessmentId),
@@ -41,7 +54,13 @@ export function MarksPage() {
   const assessments = useQuery({ queryKey: ['admin', 'assessments'], queryFn: getAssessments })
   const students = useQuery({ queryKey: ['admin', 'students'], queryFn: getStudents })
   const courses = useQuery({ queryKey: ['admin', 'courses'], queryFn: getCourses })
-  const create = useMutation({ mutationFn: createMark, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['admin'] }); setFormOpen(false); toast.success('Mark recorded') } })
+  const refresh = () => client.invalidateQueries({ queryKey: ['admin'] })
+  const create = useMutation({ mutationFn: createMark, onSuccess: async () => { await refresh(); setFormOpen(false); toast.success('Mark recorded') } })
+  const update = useMutation({
+    mutationFn: ({ id, request }: { id: number; request: MarkUpdateRequest }) => updateMark(id, request),
+    onSuccess: async () => { await refresh(); setEditing(null); toast.success('Mark corrected') },
+  })
+  const remove = useMutation({ mutationFn: deleteMark, onSuccess: async () => { await refresh(); toast.success('Mark deleted') } })
   const detail = useQuery({ queryKey: markKeys.detail(viewing?.markId ?? 0), queryFn: () => getMark(viewing!.markId), enabled: viewing !== null })
   const enrollmentById = useMemo(() => new Map((enrollments.data ?? []).map((item) => [item.enrollmentId, item])), [enrollments.data])
   const assessmentById = useMemo(() => new Map((assessments.data ?? []).map((item) => [item.assessmentId, item])), [assessments.data])
@@ -55,6 +74,10 @@ export function MarksPage() {
     const match = `${mark.markId} ${student?.enrollmentNumber ?? ''} ${assessment?.name ?? ''} ${course?.courseCode ?? ''} ${mark.marksObtained}`.toLowerCase().includes(search.trim().toLowerCase())
     return match && (assessmentId === 'ALL' || mark.assessmentId === Number(assessmentId))
   }), [marks.data, enrollmentById, assessmentById, courseById, studentById, search, assessmentId])
+
+  async function saveEdit(markId: number, request: MarkUpdateRequest) {
+    try { await update.mutateAsync({ id: markId, request }) } catch (error) { notifyError(error, 'The mark could not be corrected.') }
+  }
 
   async function save(request: Parameters<typeof createMark>[0]) {
     try { await create.mutateAsync(request) } catch (error) { notifyError(error, 'The mark could not be recorded.') }
@@ -77,11 +100,34 @@ export function MarksPage() {
           <><SelectField label="Enrollment" value={enrollmentId} onChange={(event) => { setEnrollmentId(event.target.value); setPage(0) }}><option value="ALL">All enrollments</option>{enrollments.data?.map((item) => <option key={item.enrollmentId} value={item.enrollmentId}>#{item.enrollmentId} · {studentById.get(item.studentId)?.enrollmentNumber ?? `Student #${item.studentId}`}</option>)}</SelectField><SelectField label="Assessment" value={assessmentId} onChange={(event) => { setAssessmentId(event.target.value); setPage(0) }}><option value="ALL">All assessments</option>{assessments.data?.map((item) => <option key={item.assessmentId} value={item.assessmentId}>{item.name}</option>)}</SelectField></>
         )} />
         {marks.isPending ? <TableSkeleton rows={8} columns={4} label="Loading marks" /> : marks.isError ? <ErrorState error={marks.error} onRetry={() => void marks.refetch()} /> : filtered.length === 0 ? <EmptyState title={marks.data.totalElements ? 'No marks on this page match' : 'No marks recorded yet'} description={marks.data.totalElements ? 'Try another enrollment, assessment, search term or page.' : 'Record a mark after an enrollment and assessment exist.'} /> : (
-          <ResourceTable caption="Marks directory" columns={columns} rows={filtered} getRowKey={(mark) => mark.markId} actions={(mark) => <Button size="sm" variant="ghost" title="View mark details" aria-label={`View mark ${mark.markId}`} onClick={() => setViewing(mark)}><Eye size={16} /></Button>} />
+          <ResourceTable caption="Marks directory" columns={columns} rows={filtered} getRowKey={(mark) => mark.markId} actions={(mark) => (
+            <div className="row-actions">
+              <Button size="sm" variant="ghost" title="View mark details" aria-label={`View mark ${mark.markId}`} onClick={() => setViewing(mark)}><Eye size={16} aria-hidden="true" /></Button>
+              <Button size="sm" variant="ghost" title="Correct mark" aria-label={`Correct mark ${mark.markId}`} onClick={() => setEditing(mark)}><Pencil size={16} aria-hidden="true" /></Button>
+              <ConfirmDialog
+                title="Delete recorded mark?"
+                description={`Delete this mark of ${mark.marksObtained}? The mark row is removed; the student's enrollment and any attendance records are left untouched.`}
+                confirmLabel="Delete mark"
+                onConfirm={async () => {
+                  try { await remove.mutateAsync(mark.markId) }
+                  catch (error) { notifyError(error, 'The mark could not be deleted.'); throw error }
+                }}
+                trigger={<Button size="sm" variant="ghost" title="Delete mark" aria-label={`Delete mark ${mark.markId}`}><Trash2 size={16} aria-hidden="true" /></Button>}
+              />
+            </div>
+          )} />
         )}
         {!marks.isPending && !marks.isError && marks.data && <PaginationControls page={marks.data.page} size={marks.data.size} totalElements={marks.data.totalElements} totalPages={marks.data.totalPages} onPageChange={setPage} />}
       </Card>
       {dependencyError && <ErrorState error={dependencyError} onRetry={() => { void enrollments.refetch(); void assessments.refetch(); void students.refetch(); void courses.refetch() }} />}
+      <MarkEditDialog
+        open={editing !== null}
+        onOpenChange={(open) => { if (!open) setEditing(null) }}
+        mark={editing}
+        assessment={editing ? assessmentById.get(editing.assessmentId) ?? null : null}
+        context={editing ? `${studentById.get(enrollmentById.get(editing.enrollmentId)?.studentId ?? 0)?.enrollmentNumber ?? `Enrollment #${editing.enrollmentId}`} · ${assessmentById.get(editing.assessmentId)?.name ?? `Assessment #${editing.assessmentId}`}` : ''}
+        onSubmit={saveEdit}
+      />
       <MarkFormDialog open={formOpen} onOpenChange={setFormOpen} enrollments={enrollments.data ?? []} assessments={assessments.data ?? []} students={students.data ?? []} courses={courses.data ?? []} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`Mark #${viewing.markId}`} description="Mark entry details" notice={detail.isPending ? <LoadingState label="Refreshing mark details" /> : detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : undefined} fields={[
         { label: 'Mark ID', value: detail.data?.markId ?? viewing.markId }, { label: 'Enrollment ID', value: detail.data?.enrollmentId ?? viewing.enrollmentId },

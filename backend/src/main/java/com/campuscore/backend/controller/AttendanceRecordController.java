@@ -1,10 +1,14 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.AttendanceRecordResponse;
+import com.campuscore.backend.dto.StudentAttendanceResponse;
 import com.campuscore.backend.dto.PageResponse;
 import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.entity.AttendanceRecord;
+import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.service.AttendanceRecordService;
+import com.campuscore.backend.service.StudentService;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
@@ -17,10 +21,55 @@ import java.util.List;
 public class AttendanceRecordController {
 
     private final AttendanceRecordService attendanceRecordService;
+    private final StudentService studentService;
 
     public AttendanceRecordController(
             AttendanceRecordService attendanceRecordService) {
+        this(attendanceRecordService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AttendanceRecordController(
+            AttendanceRecordService attendanceRecordService,
+            StudentService studentService) {
         this.attendanceRecordService = attendanceRecordService;
+        this.studentService = studentService;
+    }
+
+    /**
+     * The signed-in student's own attendance, with each row's course and session
+     * already joined in.
+     *
+     * <p>This route replaces the workspace's previous approach of calling the
+     * institution-wide session listing, which is administrator-only and therefore
+     * refused every student. Taking no identifier, ownership is resolved from the
+     * verified session rather than the request.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<List<StudentAttendanceResponse>> getMyAttendance(
+            Authentication authentication) {
+
+        if (studentService == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Student student = studentService.getStudentForUsername(authentication.getName());
+
+        List<StudentAttendanceResponse> response =
+                attendanceRecordService.getRecordsForStudent(student.getStudentId())
+                        .stream()
+                        .map(record -> new StudentAttendanceResponse(
+                                record.getAttendanceRecordId(),
+                                record.getAttendanceSession().getAttendanceSessionId(),
+                                record.getAttendanceSession().getCourse().getCourseCode(),
+                                record.getAttendanceSession().getCourse().getCourseName(),
+                                record.getAttendanceSession().getSessionDate().toString(),
+                                record.getAttendanceSession().getTopic(),
+                                record.getStatus().name(),
+                                record.getMarkedAt() == null ? null : record.getMarkedAt().toString()))
+                        .toList();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping

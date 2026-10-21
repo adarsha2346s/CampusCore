@@ -1078,3 +1078,67 @@
 .campuscore-toast [data-description] {
   color: rgb(255 255 255 / 72%);
 }
+
+/* ------------------------------------------------------------------
+   BorderGlow - restrained edge illumination
+   A single cool, low-opacity light along the edge. No hue rotation, no
+   multi-stop rainbow, no animated sweep. Opted into per surface only.
+   ------------------------------------------------------------------ */
+
+.border-glow {
+  position: relative;
+  isolation: isolate;
+}
+
+.border-glow::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--pr2) 26%, transparent),
+    color-mix(in srgb, var(--pr2) 6%, transparent) 42%,
+    transparent 68%
+  );
+  content: '';
+  opacity: 0.55;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transition: opacity var(--duration-normal) var(--ease-standard);
+}
+
+.border-glow--medium::before {
+  opacity: 0.75;
+}
+
+.border-glow--accent::before {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--pr) 26%, transparent),
+    color-mix(in srgb, var(--pr) 6%, transparent) 42%,
+    transparent 68%
+  );
+}
+
+/* Monochrome design mode drops the light entirely rather than tinting it. */
+:root[data-ds='mono'] .border-glow::before {
+  background: linear-gradient(160deg, rgb(255 255 255 / 40%), transparent 60%);
+}
+
+:root[data-ds='mono'] .border-glow--accent::before {
+  background: linear-gradient(160deg, rgb(0 0 0 / 45%), transparent 60%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-glow::before {
+    transition: none;
+  }
+}

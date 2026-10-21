@@ -103,19 +103,38 @@ public class SecurityConfig {
                         .permitAll()
 
                         // =========================
-                        // PUBLIC LOGIN; CURRENT USER REQUIRES AUTHENTICATION
+                        // ROLE MATRIX
+                        //
+                        // Every /api/v1 path is listed explicitly below and the
+                        // catch-all denies it. A route that is not classified can
+                        // therefore never become reachable just by being added to
+                        // a controller: it fails closed instead of inheriting
+                        // "authenticated" by accident.
+                        //
+                        // This matrix only decides WHICH ROLES may call a route.
+                        // WHICH RECORDS a caller may touch is enforced separately
+                        // by AccessScope in the service layer, because a path
+                        // matcher cannot express ownership.
                         // =========================
+
+                        // ---- PUBLIC ----
+
+                        // CORS preflight only.
                         .requestMatchers(
                                 HttpMethod.OPTIONS,
                                 "/api/v1/**"
                         )
                         .permitAll()
 
+                        // Login is the only public operation. Failures return a
+                        // generic 401 so a caller cannot probe for valid accounts.
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/login"
                         )
                         .permitAll()
+
+                        // ---- AUTHENTICATED (any role) ----
 
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -123,81 +142,89 @@ public class SecurityConfig {
                         )
                         .authenticated()
 
-                        // =========================
-                        // USER MANAGEMENT
-                        // ADMIN ONLY
-                        // =========================
+                        // Read-only reference data every signed-in user needs.
                         .requestMatchers(
-                                "/api/v1/users",
-                                "/api/v1/users/**"
+                                HttpMethod.GET,
+                                "/api/v1/departments",
+                                "/api/v1/departments/*"
                         )
-                        .hasRole("ADMIN")
+                        .authenticated()
 
-                        // =========================
-                        // STUDENT DASHBOARD
-                        // STUDENT ONLY
-                        // =========================
                         .requestMatchers(
-                                "/api/v1/dashboard/student/**"
+                                HttpMethod.GET,
+                                "/api/v1/courses",
+                                "/api/v1/courses/*"
+                        )
+                        .authenticated()
+
+                        // Who teaches a course is not sensitive and is shown to
+                        // students; the write routes below are ADMIN only.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/courses/*/faculty-assignments",
+                                "/api/v1/courses/*/faculty-assignments/*"
+                        )
+                        .authenticated()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/grading-policies",
+                                "/api/v1/grading-policies/*"
+                        )
+                        .authenticated()
+
+                        // ---- STUDENT (self service) ----
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/students/me",
+                                "/api/v1/enrollments/me"
                         )
                         .hasRole("STUDENT")
 
-                        // Student records are readable by admin and faculty;
-                        // students may request a record, with ownership checked
-                        // in StudentController.
+                        // Assessment metadata for the caller's own marks only.
+                        // Declared before the faculty assessment rule below, which
+                        // also matches this path.
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/students"
-                        )
-                        .hasAnyRole("ADMIN", "FACULTY")
-
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/v1/students/me"
+                                "/api/v1/assessments/me"
                         )
                         .hasRole("STUDENT")
 
+                        // The caller's own marks and attendance, joined with their
+                        // course and session so the student workspace needs one
+                        // request instead of one per enrollment.
+                        //
+                        // Both are declared BEFORE the faculty rules below. The
+                        // faculty matcher for "/api/v1/marks/**" and
+                        // "/api/v1/attendance-records/**" would otherwise swallow
+                        // these paths and lock every student out of their own data,
+                        // which is exactly what happened when the workspace called
+                        // the institution-wide session listing directly.
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/students/**"
+                                "/api/v1/marks/me",
+                                "/api/v1/attendance-records/me"
+                        )
+                        .hasRole("STUDENT")
+
+                        // Dashboard ownership is checked by AccessScope.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/dashboard/student/*"
                         )
                         .hasAnyRole("ADMIN", "FACULTY", "STUDENT")
 
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/students",
-                                "/api/v1/students/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/v1/students/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        .requestMatchers(
-                                HttpMethod.DELETE,
-                                "/api/v1/students/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // GPA is available to administrators and students.
-                        // Student requests are scoped to their own enrollment
-                        // by GpaController.
-                        .requestMatchers("/api/v1/gpa/**")
-                        .hasAnyRole("ADMIN", "STUDENT")
-
-                        // =========================
-                        // FACULTY MANAGEMENT
-                        // =========================
-
-                        // Faculty list → ADMIN only
+                        // GPA ownership is checked by AccessScope.
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/faculty"
+                                "/api/v1/gpa/**"
                         )
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "FACULTY", "STUDENT")
+
+                        // ---- FACULTY (teaching scope) ----
+                        // Course scope is checked by AccessScope: a faculty member
+                        // reaches a course only while assigned to it.
 
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -205,213 +232,141 @@ public class SecurityConfig {
                         )
                         .hasRole("FACULTY")
 
-                        // Faculty creation → ADMIN only
+                        // The bare collection is an institution-wide listing and
+                        // is not scope filtered, so it stays ADMIN only. Faculty
+                        // reach assessments through a course they are assigned to.
                         .requestMatchers(
-                                HttpMethod.POST,
+                                HttpMethod.GET,
+                                "/api/v1/assessments"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/assessments/*",
+                                "/api/v1/assessments/**"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY")
+
+                        // Institution-wide listing, not scope filtered: ADMIN only.
+                        // A student reaching every mark through this route was a
+                        // real disclosure, so it is no longer role-shared.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/marks"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/marks/*",
+                                "/api/v1/marks/**"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY", "STUDENT")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/attendance-sessions"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/attendance-sessions/*",
+                                "/api/v1/attendance-sessions/**"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/attendance-records"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/attendance-records/*",
+                                "/api/v1/attendance-records/**"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY", "STUDENT")
+
+                        // A faculty member sees only students they teach and only
+                        // their own faculty record.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/students",
+                                "/api/v1/students/*"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/v1/faculty"
                         )
                         .hasRole("ADMIN")
 
-                        // Individual faculty record →
-                        // ADMIN or FACULTY
+                        // An individual faculty record and its teaching history are
+                        // visible to administrators and to that faculty member only;
+                        // FacultyController rejects any other faculty member.
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/faculty/**"
+                                "/api/v1/faculty/*",
+                                "/api/v1/faculty/*/*"
                         )
                         .hasAnyRole("ADMIN", "FACULTY")
 
-                        // =========================
-                        // DEPARTMENT MANAGEMENT
-                        // =========================
-
-                        // Authenticated users can view departments
+                        // Faculty need the enrollments of a course they teach in
+                        // order to reach its marks. The service checks the course
+                        // assignment, so this cannot be used to read the
+                        // enrollments of a course the caller does not teach.
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/departments",
-                                "/api/v1/departments/**"
+                                "/api/v1/enrollments/course/**"
                         )
-                        .authenticated()
+                        .hasAnyRole("ADMIN", "FACULTY")
 
-                        // Only ADMIN can create departments
+                        // Faculty record their own teaching data. Scope is checked
+                        // against the target course or enrollment by AccessScope.
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/v1/departments"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Only ADMIN can update departments
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/v1/departments/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Only ADMIN can delete departments
-                        .requestMatchers(
-                                HttpMethod.DELETE,
-                                "/api/v1/departments/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // =========================
-                        // COURSE MANAGEMENT
-                        // =========================
-
-                        // Authenticated users can view courses
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/v1/courses",
-                                "/api/v1/courses/**"
-                        )
-                        .authenticated()
-
-                        // Only ADMIN can create courses
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/courses"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Only ADMIN can change course lifecycle status.
-                        // This sub-path previously matched no course rule, so it
-                        // fell through to anyRequest().authenticated() and let
-                        // any signed-in user (including STUDENT) deactivate a
-                        // course. "*" matches exactly the {id} segment.
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/courses/*/deactivate"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Only ADMIN can update courses
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/v1/courses/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Only ADMIN can delete courses
-                        .requestMatchers(
-                                HttpMethod.DELETE,
-                                "/api/v1/courses/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // Faculty-to-course assignment writes. Reads are already
-                        // covered by the course read rule above, and PUT/DELETE are
-                        // already covered by the course PUT/DELETE rules, so only the
-                        // POST sub-path needs its own entry: "POST /api/v1/courses"
-                        // is an exact-path match and does not reach this sub-path.
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/courses/*/faculty-assignments"
-                        )
-                        .hasRole("ADMIN")
-
-                        // =========================
-                        // ENROLLMENT MANAGEMENT
-                        // =========================
-
-                        // Students can list only their own enrollments through
-                        // the self-service endpoint. Arbitrary enrollment
-                        // records remain ADMIN-only.
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/v1/enrollments/me"
-                        )
-                        .hasRole("STUDENT")
-
-                        .requestMatchers(
-                                "/api/v1/enrollments",
-                                "/api/v1/enrollments/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // =========================
-                        // ASSESSMENT MANAGEMENT
-                        // =========================
-
-                        // Current assessment endpoints expose
-                        // arbitrary assessment records.
-                        // Keep them ADMIN-only for now.
-                        .requestMatchers(
                                 "/api/v1/assessments",
                                 "/api/v1/assessments/**"
                         )
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "FACULTY")
 
-                        // =========================
-                        // MARK MANAGEMENT
-                        // =========================
-
-                        // Current mark endpoints expose
-                        // arbitrary student marks.
-                        // Keep them ADMIN-only for now.
                         .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/v1/marks",
                                 "/api/v1/marks/**"
                         )
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "FACULTY")
 
-                        // =========================
-                        // ATTENDANCE SESSION MANAGEMENT
-                        // =========================
-
-                        // Current attendance-session endpoints
-                        // expose arbitrary attendance sessions.
-                        // Keep them ADMIN-only for now.
                         .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/v1/attendance-sessions",
                                 "/api/v1/attendance-sessions/**"
                         )
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "FACULTY")
 
-                                // =========================
-// ATTENDANCE RECORD MANAGEMENT
-// =========================
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/attendance-records",
+                                "/api/v1/attendance-records/**"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY")
 
-// Current endpoints expose arbitrary attendance records.
-// Keep them ADMIN-only until ownership-scoped endpoints exist.
-                                .requestMatchers(
-                                        "/api/v1/attendance-records",
-                                        "/api/v1/attendance-records/**"
-                                )
-                                .hasRole("ADMIN")// =========================
-                        // EVERYTHING ELSE
-                                // =========================
-// GRADING POLICY MANAGEMENT
-// =========================
+                        // ---- ADMIN (everything else under /api/v1) ----
 
-// Authenticated users can view grading policies
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/v1/grading-policies",
-                                        "/api/v1/grading-policies/**"
-                                )
-                                .authenticated()
+                        .requestMatchers("/api/v1/**").hasRole("ADMIN")
 
-// Only ADMIN can create grading policies
-                                .requestMatchers(
-                                        HttpMethod.POST,
-                                        "/api/v1/grading-policies"
-                                )
-                                .hasRole("ADMIN")
-
-                                // =========================
-// AUDIT LOG MANAGEMENT
-// =========================
-
-// Audit logs contain sensitive system activity.
-// ADMIN only.
-                                .requestMatchers(
-                                        "/api/v1/audit-logs",
-                                        "/api/v1/audit-logs/**"
-                                )
-                                .hasRole("ADMIN")
-
-                                // =========================
+                        // =========================
+                        // NON-API PATHS
+                        // =========================
+                        // Deny by default. Nothing outside /api/v1 is served by
+                        // this application, so an unclassified route is refused
+                        // rather than opened up.
                         .anyRequest()
-                        .authenticated()
+                        .denyAll()
                 )
 
                 .addFilterBefore(

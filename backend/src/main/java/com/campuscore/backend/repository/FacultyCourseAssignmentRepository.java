@@ -30,6 +30,9 @@ public interface FacultyCourseAssignmentRepository
             findByCourseCourseIdAndFacultyFacultyIdAndEndedAtIsNull(
                     Long courseId, Long facultyId);
 
+    boolean existsByCourseCourseIdAndFacultyFacultyIdAndEndedAtIsNull(
+            Long courseId, Long facultyId);
+
     long countByCourseCourseId(Long courseId);
 
     long countByFacultyFacultyId(Long facultyId);

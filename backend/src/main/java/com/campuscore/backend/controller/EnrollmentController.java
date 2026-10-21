@@ -1,5 +1,7 @@
 package com.campuscore.backend.controller;
 
+import com.campuscore.backend.dto.EnrollmentRequest;
+import jakarta.validation.Valid;
 import com.campuscore.backend.dto.EnrollmentResponse;
 import com.campuscore.backend.dto.PageResponse;
 import com.campuscore.backend.lib.PageParameters;
@@ -11,9 +13,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/enrollments")
@@ -46,6 +51,53 @@ public class EnrollmentController {
                 .map(this::toResponse)
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    // Enrollments of one course, for faculty teaching that course.
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<EnrollmentResponse>> getEnrollmentsByCourse(
+            @PathVariable Long courseId) {
+
+        List<EnrollmentResponse> response = enrollmentService
+                .getEnrollmentsByCourse(courseId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Change the term or the lifecycle status of an enrollment.
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateEnrollment(
+            @PathVariable Long id,
+            @Valid @RequestBody EnrollmentRequest request,
+            BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(fieldErrors(bindingResult));
+        }
+
+        Enrollment enrollment = enrollmentService.updateEnrollment(
+                id,
+                request.getSemester(),
+                request.getAcademicYear(),
+                request.getStatus()
+        );
+
+        return ResponseEntity.ok(toResponse(enrollment));
+    }
+
+    // Remove an enrollment that has no academic records yet.
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEnrollment(
+            @PathVariable Long id) {
+
+        enrollmentService.deleteEnrollment(id);
+
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
@@ -99,6 +151,19 @@ public class EnrollmentController {
                 .body(toResponse(enrollment));
     }
 
+    private Map<String, String> fieldErrors(BindingResult bindingResult) {
+        Map<String, String> errors = new HashMap<>();
+
+        bindingResult.getFieldErrors().forEach(error ->
+                errors.put(
+                        error.getField(),
+                        error.getDefaultMessage()
+                )
+        );
+
+        return errors;
+    }
+
     private EnrollmentResponse toResponse(Enrollment enrollment) {
 
         String enrollmentDate = null;
@@ -108,14 +173,19 @@ public class EnrollmentController {
                     enrollment.getEnrollmentDate().toString();
         }
 
+        Student student = enrollment.getStudent();
+
         return new EnrollmentResponse(
                 enrollment.getEnrollmentId(),
-                enrollment.getStudent().getStudentId(),
+                student.getStudentId(),
                 enrollment.getCourse().getCourseId(),
                 enrollment.getSemester(),
                 enrollment.getAcademicYear(),
                 enrollmentDate,
-                enrollment.getStatus().name()
+                enrollment.getStatus().name(),
+                student.getEnrollmentNumber(),
+                student.getFirstName(),
+                student.getLastName()
         );
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.TransactionException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.ErrorResponseException;
@@ -189,6 +190,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         String message = safeMessage(exception.getMessage(), GENERIC_CLIENT_ERROR);
 
         return build(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
+     * Raised by the service layer when the caller is authenticated but not
+     * permitted to touch a specific record. Spring Security's own authorization
+     * failures are handled earlier in the filter chain, so this only covers
+     * ownership and scope checks that run after dispatch.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(
+            AccessDeniedException exception) {
+
+        log.debug("Access denied: {}", exception.getMessage());
+
+        return build(HttpStatus.FORBIDDEN, GENERIC_CLIENT_ERROR);
     }
 
     /**

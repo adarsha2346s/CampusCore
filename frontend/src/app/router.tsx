@@ -31,9 +31,16 @@ const AuditLogPage = lazy(() => import('../features/audit/AuditLogPage').then((m
 const FacultyOverviewPage = lazy(() => import('../features/faculty-workspace/FacultyOverviewPage').then((module) => ({ default: module.FacultyOverviewPage })))
 const FacultyStudentsPage = lazy(() => import('../features/faculty-workspace/FacultyStudentsPage').then((module) => ({ default: module.FacultyStudentsPage })))
 const FacultyCatalogPage = lazy(() => import('../features/faculty-workspace/FacultyCatalogPage').then((module) => ({ default: module.FacultyCatalogPage })))
+const FacultyCoursesPage = lazy(() => import('../features/faculty-workspace/FacultyCoursesPage').then((module) => ({ default: module.FacultyCoursesPage })))
+const FacultyAssessmentsPage = lazy(() => import('../features/faculty-workspace/FacultyAssessmentsPage').then((module) => ({ default: module.FacultyAssessmentsPage })))
+const FacultyMarksPage = lazy(() => import('../features/faculty-workspace/FacultyMarksPage').then((module) => ({ default: module.FacultyMarksPage })))
+const FacultyAttendancePage = lazy(() => import('../features/faculty-workspace/FacultyAttendancePage').then((module) => ({ default: module.FacultyAttendancePage })))
 const StudentOverviewPage = lazy(() => import('../features/student-workspace/StudentOverviewPage').then((module) => ({ default: module.StudentOverviewPage })))
 const StudentRecordPage = lazy(() => import('../features/student-workspace/StudentRecordPage').then((module) => ({ default: module.StudentRecordPage })))
 const StudentCatalogPage = lazy(() => import('../features/student-workspace/StudentCatalogPage').then((module) => ({ default: module.StudentCatalogPage })))
+const StudentEnrollmentsPage = lazy(() => import('../features/student-workspace/StudentEnrollmentsPage').then((module) => ({ default: module.StudentEnrollmentsPage })))
+const StudentMarksPage = lazy(() => import('../features/student-workspace/StudentMarksPage').then((module) => ({ default: module.StudentMarksPage })))
+const StudentAttendancePage = lazy(() => import('../features/student-workspace/StudentAttendancePage').then((module) => ({ default: module.StudentAttendancePage })))
 
 function HomeRedirect() {
   const { user } = useAuth()
@@ -93,9 +100,13 @@ export const router = createBrowserRouter([
           children: [
             { index: true, element: <Navigate to="dashboard" replace /> },
             { path: 'dashboard', element: <FacultyOverviewPage /> },
+            { path: 'courses', element: <FacultyCoursesPage /> },
+            { path: 'courses/catalog', element: <FacultyCatalogPage kind="courses" /> },
+            { path: 'assessments', element: <FacultyAssessmentsPage /> },
+            { path: 'marks', element: <FacultyMarksPage /> },
+            { path: 'attendance', element: <FacultyAttendancePage /> },
             { path: 'students', element: <FacultyStudentsPage /> },
             { path: 'departments', element: <FacultyCatalogPage kind="departments" /> },
-            { path: 'courses', element: <FacultyCatalogPage kind="courses" /> },
             { path: '*', element: <NotFoundPage /> },
           ],
         }],
@@ -109,7 +120,10 @@ export const router = createBrowserRouter([
             { index: true, element: <Navigate to="dashboard" replace /> },
             { path: 'dashboard', element: <StudentOverviewPage /> },
             { path: 'profile', element: <StudentRecordPage section="profile" /> },
-            { path: 'courses', element: <StudentCatalogPage /> },
+            { path: 'courses', element: <StudentEnrollmentsPage /> },
+            { path: 'courses/catalog', element: <StudentCatalogPage /> },
+            { path: 'marks', element: <StudentMarksPage /> },
+            { path: 'attendance', element: <StudentAttendancePage /> },
             { path: 'gpa', element: <StudentRecordPage section="gpa" /> },
             { path: '*', element: <NotFoundPage /> },
           ],

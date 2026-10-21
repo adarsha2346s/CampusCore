@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Plus } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
@@ -10,6 +10,7 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -20,7 +21,16 @@ import { formatDate } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { getStudents, studentKeys } from '../students/students.api'
 import { EnrollmentFormDialog } from './EnrollmentFormDialog'
-import { createEnrollment, enrollmentKeys, getEnrollment, getEnrollmentsPage } from './enrollments.api'
+import { EnrollmentEditDialog } from './EnrollmentEditDialog'
+import {
+  createEnrollment,
+  deleteEnrollment,
+  enrollmentKeys,
+  getEnrollment,
+  getEnrollmentsPage,
+  updateEnrollment,
+} from './enrollments.api'
+import type { EnrollmentUpdateRequest } from './enrollments.api'
 import type { EnrollmentResponse } from '../../types/api'
 
 export function EnrollmentsPage() {
@@ -33,9 +43,15 @@ export function EnrollmentsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<EnrollmentResponse | null>(null)
   const [viewing, setViewing] = useState<EnrollmentResponse | null>(null)
   const refresh = () => client.invalidateQueries({ queryKey: ['admin'] })
   const create = useMutation({ mutationFn: createEnrollment, onSuccess: async () => { await refresh(); setFormOpen(false); toast.success('Enrollment created') } })
+  const update = useMutation({
+    mutationFn: ({ id, request }: { id: number; request: EnrollmentUpdateRequest }) => updateEnrollment(id, request),
+    onSuccess: async () => { await refresh(); setEditing(null); toast.success('Enrollment updated') },
+  })
+  const remove = useMutation({ mutationFn: deleteEnrollment, onSuccess: async () => { await refresh(); toast.success('Enrollment deleted') } })
   const detail = useQuery({ queryKey: enrollmentKeys.detail(viewing?.enrollmentId ?? 0), queryFn: () => getEnrollment(viewing!.enrollmentId), enabled: viewing !== null })
   const studentById = useMemo(() => new Map((students.data ?? []).map((student) => [student.studentId, student])), [students.data])
   const courseById = useMemo(() => new Map((courses.data ?? []).map((course) => [course.courseId, course])), [courses.data])
@@ -48,6 +64,10 @@ export function EnrollmentsPage() {
 
   async function save(request: Parameters<typeof createEnrollment>[0]) {
     try { await create.mutateAsync(request) } catch (error) { notifyError(error, 'The enrollment could not be created.') }
+  }
+
+  async function saveEdit(enrollmentId: number, request: EnrollmentUpdateRequest) {
+    try { await update.mutateAsync({ id: enrollmentId, request }) } catch (error) { notifyError(error, 'The enrollment could not be updated.') }
   }
 
   const columns = [
@@ -64,11 +84,27 @@ export function EnrollmentsPage() {
       <Card className="directory-card">
         <DirectoryToolbar search={search} onSearch={(value) => { setSearch(value); setPage(0) }} searchLabel="Search this page" countLabel={`${filtered.length} shown · ${enrollments.data?.totalElements ?? 0} total`} filters={<SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0) }}><option value="ALL">All statuses</option><option value="ENROLLED">Enrolled</option><option value="DROPPED">Dropped</option><option value="COMPLETED">Completed</option></SelectField>} />
         {enrollments.isPending ? <TableSkeleton rows={8} columns={5} label="Loading enrollments" /> : enrollments.isError ? <ErrorState error={enrollments.error} onRetry={() => void enrollments.refetch()} /> : filtered.length === 0 ? <EmptyState title={enrollments.data.totalElements ? 'No enrollments on this page match' : 'No enrollments yet'} description={enrollments.data.totalElements ? 'Try another search, status or page.' : 'Create an enrollment from an active student and active course.'} /> : (
-          <ResourceTable caption="Enrollment directory" columns={columns} rows={filtered} getRowKey={(enrollment) => enrollment.enrollmentId} actions={(enrollment) => <Button size="sm" variant="ghost" title="View enrollment details" aria-label={`View enrollment ${enrollment.enrollmentId}`} onClick={() => setViewing(enrollment)}><Eye size={16} /></Button>} />
+          <ResourceTable caption="Enrollment directory" columns={columns} rows={filtered} getRowKey={(enrollment) => enrollment.enrollmentId} actions={(enrollment) => (
+            <div className="row-actions">
+              <Button size="sm" variant="ghost" title="View enrollment details" aria-label={`View enrollment ${enrollment.enrollmentId}`} onClick={() => setViewing(enrollment)}><Eye size={16} aria-hidden="true" /></Button>
+              <Button size="sm" variant="ghost" title="Edit enrollment" aria-label={`Edit enrollment ${enrollment.enrollmentId}`} onClick={() => setEditing(enrollment)}><Pencil size={16} aria-hidden="true" /></Button>
+              <ConfirmDialog
+                title="Delete enrollment?"
+                description={`Delete this enrollment of ${studentById.get(enrollment.studentId)?.enrollmentNumber ?? `student #${enrollment.studentId}`}? Deletion is refused once the enrollment has marks or attendance records; change the status instead to record the outcome.`}
+                confirmLabel="Delete enrollment"
+                onConfirm={async () => {
+                  try { await remove.mutateAsync(enrollment.enrollmentId) }
+                  catch (error) { notifyError(error, 'The enrollment could not be deleted.'); throw error }
+                }}
+                trigger={<Button size="sm" variant="ghost" title="Delete enrollment" aria-label={`Delete enrollment ${enrollment.enrollmentId}`}><Trash2 size={16} aria-hidden="true" /></Button>}
+              />
+            </div>
+          )} />
         )}
         {!enrollments.isPending && !enrollments.isError && enrollments.data && <PaginationControls page={enrollments.data.page} size={enrollments.data.size} totalElements={enrollments.data.totalElements} totalPages={enrollments.data.totalPages} onPageChange={setPage} />}
       </Card>
       {(students.isError || courses.isError) && <ErrorState error={students.error ?? courses.error} onRetry={() => { void students.refetch(); void courses.refetch() }} />}
+      <EnrollmentEditDialog open={editing !== null} onOpenChange={(open) => { if (!open) setEditing(null) }} enrollment={editing} onSubmit={saveEdit} />
       <EnrollmentFormDialog open={formOpen} onOpenChange={setFormOpen} students={(students.data ?? []).filter((student) => student.status === 'ACTIVE')} courses={(courses.data ?? []).filter((course) => course.status === 'ACTIVE')} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={`Enrollment #${viewing.enrollmentId}`} description="Course registration details" notice={detail.isPending ? <LoadingState label="Refreshing enrollment details" /> : detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : undefined} fields={[
         { label: 'Enrollment ID', value: detail.data?.enrollmentId ?? viewing.enrollmentId },

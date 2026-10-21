@@ -1014,3 +1014,27 @@
     width: 100%;
   }
 }
+/* Faculty teaching pages: scope picker for the selected assigned course. */
+.faculty-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 460px;
+}
+
+.faculty-scope .field {
+  margin: 0;
+}
+
+.faculty-scope__hint {
+  margin: 0;
+  color: var(--muted, var(--sd-ink));
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 560px) {
+  .faculty-scope {
+    max-width: none;
+  }
+}

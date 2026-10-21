@@ -32,6 +32,16 @@ public class Mark {
     @Column(name = "marks_obtained", nullable = false, precision = 6, scale = 2)
     private BigDecimal marksObtained;
 
+    /**
+     * Optimistic locking version.
+     *
+     * <p>Marks are the highest-consequence editable record in the system: two staff
+     * correcting the same result would otherwise silently overwrite each other.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @Column(name = "entered_at", nullable = false)
     private LocalDateTime enteredAt;
 
@@ -41,6 +51,14 @@ public class Mark {
     @PrePersist
     protected void onCreate() {
         enteredAt = LocalDateTime.now();
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Long getMarkId() {

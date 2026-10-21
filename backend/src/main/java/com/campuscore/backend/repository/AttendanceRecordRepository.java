@@ -4,6 +4,8 @@ import com.campuscore.backend.entity.AttendanceRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
@@ -31,6 +33,10 @@ public interface AttendanceRecordRepository
             Long enrollmentId
     );
 
+    long countByEnrollmentEnrollmentId(Long enrollmentId);
+
+    long countByAttendanceSessionAttendanceSessionId(Long attendanceSessionId);
+
     Optional<AttendanceRecord>
     findByAttendanceSessionAttendanceSessionIdAndEnrollmentEnrollmentId(
             Long attendanceSessionId,
@@ -41,4 +47,22 @@ public interface AttendanceRecordRepository
             Long attendanceSessionId,
             Long enrollmentId
     );
+
+    /**
+     * Every attendance row belonging to one student, with the session and course
+     * fetched in the same query.
+     *
+     * <p>Ownership is applied in the WHERE clause, so a student only ever loads
+     * their own rows.
+     */
+    @Query("""
+        SELECT r
+        FROM AttendanceRecord r
+        JOIN FETCH r.attendanceSession s
+        JOIN FETCH s.course c
+        JOIN FETCH r.enrollment e
+        WHERE e.student.studentId = :studentId
+        ORDER BY s.sessionDate DESC, c.courseCode ASC
+        """)
+    List<AttendanceRecord> findAllForStudent(@Param("studentId") Long studentId);
 }

@@ -38,6 +38,8 @@ export interface StudentSelfResponse {
 }
 
 export interface FacultySelfResponse {
+  /** The caller's own faculty id, used to address their scope-enforced routes. */
+  facultyId: number
   employeeNumber: string
   firstName: string
   lastName: string | null
@@ -119,6 +121,8 @@ export interface CourseResponse {
   status: 'ACTIVE' | 'INACTIVE'
 }
 
+export type EnrollmentStatus = 'ENROLLED' | 'DROPPED' | 'COMPLETED'
+
 export interface EnrollmentResponse {
   enrollmentId: number
   studentId: number
@@ -126,7 +130,11 @@ export interface EnrollmentResponse {
   semester: string
   academicYear: string
   enrollmentDate: string
-  status: 'ENROLLED' | 'DROPPED' | 'COMPLETED'
+  status: EnrollmentStatus
+  /** Identity of the enrolled student. */
+  enrollmentNumber: string
+  studentFirstName: string
+  studentLastName: string | null
 }
 
 export type AssessmentType =

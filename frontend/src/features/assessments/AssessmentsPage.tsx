@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Plus } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
@@ -10,6 +10,7 @@ import { PaginationControls } from '../../components/data-display/PaginationCont
 import { SelectField } from '../../components/forms/SelectField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { TableSkeleton } from '../../components/ui/Skeleton'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DirectoryToolbar } from '../admin-shared/DirectoryToolbar'
@@ -18,7 +19,17 @@ import { notifyError } from '../admin-shared/feedback'
 import { formatDate } from '../../lib/format/datetime'
 import { courseKeys, getCourses } from '../courses/courses.api'
 import { AssessmentFormDialog } from './AssessmentFormDialog'
-import { assessmentKeys, createAssessment, getAssessment, getAssessmentsPage, getAssessmentsByCoursePage } from './assessments.api'
+import { AssessmentEditDialog } from './AssessmentEditDialog'
+import {
+  assessmentKeys,
+  createAssessment,
+  deleteAssessment,
+  getAssessment,
+  getAssessmentsPage,
+  getAssessmentsByCoursePage,
+  updateAssessment,
+} from './assessments.api'
+import type { AssessmentUpdateRequest } from './assessments.api'
 import type { AssessmentResponse } from '../../types/api'
 
 export function AssessmentsPage() {
@@ -30,6 +41,7 @@ export function AssessmentsPage() {
   const [courseId, setCourseId] = useState('ALL')
   const [type, setType] = useState('ALL')
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AssessmentResponse | null>(null)
   const [viewing, setViewing] = useState<AssessmentResponse | null>(null)
   const assessments = useQuery({
     queryKey: assessmentKeys.page(page, pageSize, courseId === 'ALL' ? undefined : Number(courseId)),
@@ -37,9 +49,18 @@ export function AssessmentsPage() {
   })
   const refresh = () => client.invalidateQueries({ queryKey: ['admin'] })
   const create = useMutation({ mutationFn: createAssessment, onSuccess: async () => { await refresh(); setFormOpen(false); toast.success('Assessment created') } })
+  const update = useMutation({
+    mutationFn: ({ id, request }: { id: number; request: AssessmentUpdateRequest }) => updateAssessment(id, request),
+    onSuccess: async () => { await refresh(); setEditing(null); toast.success('Assessment updated') },
+  })
+  const remove = useMutation({ mutationFn: deleteAssessment, onSuccess: async () => { await refresh(); toast.success('Assessment deleted') } })
   const detail = useQuery({ queryKey: assessmentKeys.detail(viewing?.assessmentId ?? 0), queryFn: () => getAssessment(viewing!.assessmentId), enabled: viewing !== null })
   const courseById = useMemo(() => new Map((courses.data ?? []).map((course) => [course.courseId, course])), [courses.data])
   const filtered = useMemo(() => (assessments.data?.content ?? []).filter((assessment) => `${assessment.name} ${assessment.assessmentType} ${courseById.get(assessment.courseId)?.courseCode ?? ''} ${courseById.get(assessment.courseId)?.courseName ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()) && (type === 'ALL' || assessment.assessmentType === type)), [assessments.data, courseById, search, type])
+
+  async function saveEdit(assessmentId: number, request: AssessmentUpdateRequest) {
+    try { await update.mutateAsync({ id: assessmentId, request }) } catch (error) { notifyError(error, 'The assessment could not be updated.') }
+  }
 
   async function save(request: Parameters<typeof createAssessment>[0]) {
     try { await create.mutateAsync(request) } catch (error) { notifyError(error, 'The assessment could not be created.') }
@@ -61,11 +82,27 @@ export function AssessmentsPage() {
           <><SelectField label="Course" value={courseId} onChange={(event) => { setCourseId(event.target.value); setPage(0) }}><option value="ALL">All courses</option>{courses.data?.map((course) => <option key={course.courseId} value={course.courseId}>{course.courseCode}</option>)}</SelectField><SelectField label="Type" value={type} onChange={(event) => { setType(event.target.value); setPage(0) }}><option value="ALL">All types</option><option value="QUIZ">Quiz</option><option value="ASSIGNMENT">Assignment</option><option value="MIDTERM">Midterm</option><option value="FINAL">Final</option><option value="PROJECT">Project</option></SelectField></>
         )} />
         {assessments.isPending ? <TableSkeleton rows={8} columns={5} label="Loading assessments" /> : assessments.isError ? <ErrorState error={assessments.error} onRetry={() => void assessments.refetch()} /> : filtered.length === 0 ? <EmptyState title={assessments.data.totalElements ? 'No assessments on this page match' : 'No assessments yet'} description={assessments.data.totalElements ? 'Try another search, course, type or page.' : 'Add an assessment to a course to build its grading structure.'} /> : (
-          <ResourceTable caption="Assessment directory" columns={columns} rows={filtered} getRowKey={(assessment) => assessment.assessmentId} actions={(assessment) => <Button size="sm" variant="ghost" title="View assessment details" aria-label={`View ${assessment.name}`} onClick={() => setViewing(assessment)}><Eye size={16} /></Button>} />
+          <ResourceTable caption="Assessment directory" columns={columns} rows={filtered} getRowKey={(assessment) => assessment.assessmentId} actions={(assessment) => (
+            <div className="row-actions">
+              <Button size="sm" variant="ghost" title="View assessment details" aria-label={`View ${assessment.name}`} onClick={() => setViewing(assessment)}><Eye size={16} aria-hidden="true" /></Button>
+              <Button size="sm" variant="ghost" title="Edit assessment" aria-label={`Edit ${assessment.name}`} onClick={() => setEditing(assessment)}><Pencil size={16} aria-hidden="true" /></Button>
+              <ConfirmDialog
+                title="Delete assessment?"
+                description={`Delete "${assessment.name}"? If any marks have been recorded against it the deletion is refused, because the assessment is the record those marks hang from.`}
+                confirmLabel="Delete assessment"
+                onConfirm={async () => {
+                  try { await remove.mutateAsync(assessment.assessmentId) }
+                  catch (error) { notifyError(error, 'The assessment could not be deleted.'); throw error }
+                }}
+                trigger={<Button size="sm" variant="ghost" title="Delete assessment" aria-label={`Delete ${assessment.name}`}><Trash2 size={16} aria-hidden="true" /></Button>}
+              />
+            </div>
+          )} />
         )}
         {!assessments.isPending && !assessments.isError && assessments.data && <PaginationControls page={assessments.data.page} size={assessments.data.size} totalElements={assessments.data.totalElements} totalPages={assessments.data.totalPages} onPageChange={setPage} />}
       </Card>
       {courses.isError && <ErrorState error={courses.error} onRetry={() => void courses.refetch()} />}
+      <AssessmentEditDialog open={editing !== null} onOpenChange={(open) => { if (!open) setEditing(null) }} assessment={editing} onSubmit={saveEdit} />
       <AssessmentFormDialog open={formOpen} onOpenChange={setFormOpen} courses={(courses.data ?? []).filter((course) => course.status === 'ACTIVE')} onSubmit={save} />
       {viewing && <RecordDetailsDialog open onOpenChange={(open) => { if (!open) setViewing(null) }} title={detail.data?.name ?? viewing.name} description="Assessment details" notice={detail.isPending ? <LoadingState label="Refreshing assessment details" /> : detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : undefined} fields={[
         { label: 'Assessment ID', value: detail.data?.assessmentId ?? viewing.assessmentId }, { label: 'Type', value: detail.data?.assessmentType ?? viewing.assessmentType },

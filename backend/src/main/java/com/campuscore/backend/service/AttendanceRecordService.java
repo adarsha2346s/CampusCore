@@ -6,6 +6,7 @@ import com.campuscore.backend.entity.Enrollment;
 import com.campuscore.backend.repository.AttendanceRecordRepository;
 import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,34 +19,71 @@ public class AttendanceRecordService {
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AccessScope accessScope;
 
     public AttendanceRecordService(
             AttendanceRecordRepository attendanceRecordRepository,
             AttendanceSessionRepository attendanceSessionRepository,
             EnrollmentRepository enrollmentRepository) {
 
+        this(attendanceRecordRepository, attendanceSessionRepository, enrollmentRepository, null);
+    }
+
+        @Autowired
+    public AttendanceRecordService(
+            AttendanceRecordRepository attendanceRecordRepository,
+            AttendanceSessionRepository attendanceSessionRepository,
+            EnrollmentRepository enrollmentRepository,
+            AccessScope accessScope) {
+
         this.attendanceRecordRepository = attendanceRecordRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.accessScope = accessScope;
+    }
+
+    /**
+     * Every attendance row belonging to one student, for the signed-in student's
+     * own view.
+     *
+     * <p>Ownership is re-checked here rather than trusting the controller: the
+     * controller derives the id from the verified session, and this guard makes
+     * sure the service cannot be reached with someone else's id. Fails closed when
+     * the scope service is absent.
+     */
+    public List<AttendanceRecord> getRecordsForStudent(Long studentId) {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+
+        accessScope.requireStudentAccess(studentId);
+
+        return attendanceRecordRepository.findAllForStudent(studentId);
     }
 
     public List<AttendanceRecord> getAllRecords() {
+        requireAdminForGlobalListing();
         return attendanceRecordRepository.findAll();
     }
 
     public Page<AttendanceRecord> getRecordsPage(Pageable pageable) {
+        requireAdminForGlobalListing();
         return attendanceRecordRepository.findAll(pageable);
     }
 
     public AttendanceRecord getRecordById(Long id) {
-        return attendanceRecordRepository.findById(id)
+        AttendanceRecord record = attendanceRecordRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Attendance record not found"));
+        requireEnrollmentAccess(record.getEnrollment().getEnrollmentId());
+        return record;
     }
 
     public List<AttendanceRecord> getRecordsBySession(
             Long attendanceSessionId) {
 
+        requireSessionAccess(attendanceSessionId);
         return attendanceRecordRepository
                 .findByAttendanceSessionAttendanceSessionId(
                         attendanceSessionId
@@ -53,17 +91,20 @@ public class AttendanceRecordService {
     }
 
     public Page<AttendanceRecord> getRecordsBySessionPage(Long sessionId, Pageable pageable) {
+        requireSessionAccess(sessionId);
         return attendanceRecordRepository.findByAttendanceSessionAttendanceSessionId(sessionId, pageable);
     }
 
     public List<AttendanceRecord> getRecordsByEnrollment(
             Long enrollmentId) {
 
+        requireEnrollmentAccess(enrollmentId);
         return attendanceRecordRepository
                 .findByEnrollmentEnrollmentId(enrollmentId);
     }
 
     public Page<AttendanceRecord> getRecordsByEnrollmentPage(Long enrollmentId, Pageable pageable) {
+        requireEnrollmentAccess(enrollmentId);
         return attendanceRecordRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable);
     }
 
@@ -71,6 +112,9 @@ public class AttendanceRecordService {
             Long attendanceSessionId,
             Long enrollmentId,
             AttendanceRecord.Status status) {
+
+        requireSessionAccess(attendanceSessionId);
+        requireEnrollmentAccess(enrollmentId);
 
         if (attendanceRecordRepository
                 .existsByAttendanceSessionAttendanceSessionIdAndEnrollmentEnrollmentId(
@@ -106,4 +150,52 @@ public class AttendanceRecordService {
 
         return attendanceRecordRepository.save(record);
     }
+
+    /**
+     * An attendance record belongs to a session, so session scope decides
+     * visibility. Fails closed when the scope service is not wired.
+     */
+    private void requireSessionAccess(Long sessionId) {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId).orElse(null);
+
+        if (session == null) {
+            throw new com.campuscore.backend.exception.ResourceNotFoundException(
+                    "Attendance session not found with ID: " + sessionId);
+        }
+
+        accessScope.requireCourseAccess(session.getCourse().getCourseId());
+    }
+
+    private void requireEnrollmentAccess(Long enrollmentId) {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+        accessScope.requireEnrollmentAccess(enrollmentId);
+    }
+
+    /**
+     * Guards the institution-wide listings.
+     *
+     * These getters are not scope filtered, so they are reserved for
+     * administrators. Requiring the role here as well as in the request matcher
+     * means a future route that calls one of them cannot silently expose every
+     * record in the institution to a faculty member or a student.
+     */
+    private void requireAdminForGlobalListing() {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+        if (!accessScope.isAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "This listing is restricted to administrators");
+        }
+    }
+
 }

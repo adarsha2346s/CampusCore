@@ -25,3 +25,29 @@ export const createFaculty = (request: FacultyCreateRequest) => http<FacultyResp
   method: 'POST',
   query: { ...request },
 })
+
+export interface FacultyAssignment {
+  assignmentId: number
+  courseId: number
+  courseCode: string
+  courseName: string
+  facultyId: number
+  employeeNumber: string
+  facultyName: string
+  assignedAt: string
+  endedAt: string | null
+  active: boolean
+}
+
+export const facultyCourseKeys = {
+  mine: (facultyId: number) => ['faculty', 'courses', facultyId] as const,
+}
+
+/**
+ * Courses currently assigned to a faculty member.
+ *
+ * Read-only here. Assignment writes are an administrator capability and are not
+ * exposed in this workspace, mirroring the backend role matrix.
+ */
+export const getFacultyCourses = (facultyId: number) =>
+  http<FacultyAssignment[]>(`faculty/${facultyId}/courses`)

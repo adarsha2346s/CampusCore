@@ -1,5 +1,6 @@
 package com.campuscore.backend.controller;
 
+import com.campuscore.backend.dto.AttendanceSessionRequest;
 import com.campuscore.backend.dto.AttendanceSessionResponse;
 import com.campuscore.backend.dto.PageResponse;
 import com.campuscore.backend.lib.PageParameters;
@@ -9,7 +10,13 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -118,6 +125,55 @@ public class AttendanceSessionController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(toResponse(session));
+    }
+
+    // =========================
+    // UPDATE SESSION
+    // =========================
+
+    /**
+     * Change a session's date and topic.
+     *
+     * <p>The course and faculty member are not editable here, since attendance
+     * records are filed against the session and would follow it to the wrong class.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateSession(
+            @PathVariable Long id,
+            @Valid @RequestBody AttendanceSessionRequest request,
+            BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of(
+                            "message", "Validation failed",
+                            "errors", bindingResult.getFieldErrors().stream()
+                                    .collect(Collectors.toMap(
+                                            FieldError::getField,
+                                            FieldError::getDefaultMessage,
+                                            (first, second) -> first))));
+        }
+
+        AttendanceSession session = attendanceSessionService.updateSession(id, request);
+
+        return ResponseEntity.ok(toResponse(session));
+    }
+
+    // =========================
+    // DELETE SESSION
+    // =========================
+
+    /**
+     * Delete a session that carries no attendance records.
+     *
+     * <p>Reported as 409 while attendance exists, since the attendance rows are the
+     * child records of this session.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteSession(@PathVariable Long id) {
+        attendanceSessionService.deleteSession(id);
+        return ResponseEntity.noContent().build();
     }
 
     private AttendanceSessionResponse toResponse(

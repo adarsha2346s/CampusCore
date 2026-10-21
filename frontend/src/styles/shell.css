@@ -50,43 +50,21 @@
   text-transform: uppercase;
 }
 
-.role-switcher {
+.role-identity__value {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0 10px;
   border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 10px;
+  border-radius: 9px;
+  color: #fff;
   background: rgb(255 255 255 / 7%);
-}
-
-.role-switcher__option {
-  flex: 1;
-  min-height: 32px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: 8px;
-  color: var(--sd-ink);
-  background: none;
   font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--duration-normal) var(--ease-standard), color var(--duration-normal) var(--ease-standard);
-}
-
-.role-switcher__option:hover:not([aria-pressed='true']):not(:disabled) {
-  color: #fff;
-  background: rgb(255 255 255 / 8%);
-}
-
-.role-switcher__option[aria-pressed='true'] {
-  color: #fff;
-  background: var(--gradient-primary);
   font-weight: 600;
-}
-
-.role-switcher__option:disabled {
-  color: rgb(255 255 255 / 42%);
-  cursor: not-allowed;
+  cursor: default;
+  user-select: none;
 }
 
 /* Navigation */
@@ -507,7 +485,7 @@
     height: 44px;
   }
 
-  .role-switcher__option {
+  .role-identity__value {
     min-height: 44px;
   }
 
@@ -544,27 +522,264 @@
   background: #fff;
 }
 
-:root[data-ds='mono'] .role-switcher {
+:root[data-ds='mono'] .role-identity__value {
   border-color: #fff;
   background: transparent;
-}
-
-:root[data-ds='mono'] .role-switcher__option[aria-pressed='true'] {
-  color: #000;
-  background: #fff;
-}
-
-:root[data-ds='mono'] .role-switcher__option:disabled {
-  color: #8f8f8f;
-}
-
-:root[data-ds='mono'] .role-switcher__option:hover:not([aria-pressed='true']):not(:disabled) {
-  color: #000;
-  background: #e5e5e5;
 }
 
 :root[data-ds='mono'] .bento-card--hot,
 :root[data-ds='mono'] .button--primary {
   color: #fff;
   background: #000;
+}
+
+/* ------------------------------------------------------------------
+   Shell foundation for V2
+   Skip link, top bar, mobile drawer. Reuses the existing tokens so the
+   premium visual phase can restyle these without reworking structure.
+   ------------------------------------------------------------------ */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--sidebar-ink);
+  background: var(--sd);
+  font-size: 0.85rem;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  background-color: var(--sd);
+}
+
+.top-bar__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.top-bar__spacer {
+  flex: 1;
+}
+
+.top-bar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 9px;
+  color: var(--sidebar-muted);
+  background: rgb(255 255 255 / 6%);
+}
+
+.top-bar__search-input {
+  width: 180px;
+  max-width: 40vw;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.top-bar__search-input:focus {
+  outline: none;
+}
+
+.top-bar__icon-button,
+.top-bar__nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 9px;
+  color: inherit;
+  background: rgb(255 255 255 / 6%);
+  cursor: pointer;
+}
+
+.top-bar__icon-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.top-bar__nav-toggle {
+  display: none;
+}
+
+.top-bar__nav-glyph,
+.top-bar__nav-glyph::before,
+.top-bar__nav-glyph::after {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: '';
+}
+
+.top-bar__nav-glyph {
+  position: relative;
+}
+
+.top-bar__nav-glyph::before {
+  position: absolute;
+  top: -5px;
+}
+
+.top-bar__nav-glyph::after {
+  position: absolute;
+  top: 5px;
+}
+
+.sidebar__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  border: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+/* Visible keyboard focus everywhere in the shell. */
+.skip-link:focus-visible,
+.top-bar__icon-button:focus-visible,
+.top-bar__nav-toggle:focus-visible,
+.side-nav__link:focus-visible,
+.sidebar__link:focus-visible,
+.sidebar__icon-button:focus-visible,
+.sidebar__actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .top-bar__nav-toggle {
+    display: inline-flex;
+  }
+
+  .top-bar {
+    padding: 0 12px;
+  }
+
+  .top-bar__search-input {
+    width: 120px;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-standard);
+    z-index: 25;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 560px) {
+  .top-bar__search {
+    display: none;
+  }
+
+  .top-bar__title {
+    font-size: 0.85rem;
+  }
+}
+
+/* Active navigation item gets the restrained edge light. */
+.side-nav__link {
+  position: relative;
+}
+
+.side-nav__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.side-nav__link > svg,
+.side-nav__link > span {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------
+   Phase 2 shell accessibility guarantees
+   ------------------------------------------------------------------ */
+
+/* Comfortable touch targets for the sidebar controls on touch devices. */
+@media (pointer: coarse) {
+  .side-nav__link,
+  .sidebar__link,
+  .sidebar__icon-button,
+  .top-bar__icon-button,
+  .top-bar__nav-toggle,
+  .sidebar__actions button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .sidebar__link,
+  .side-nav__link {
+    justify-content: flex-start;
+  }
+}
+
+/* The shell never scrolls sideways; only wide data regions do. */
+.workspace,
+.workspace__main {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Motion in the shell is transform/opacity only and is opt-out-able. */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+
+  .top-bar {
+    transition: none;
+  }
+
+  .border-glow::before {
+    transition: none;
+  }
+
+  .skip-link {
+    transition: none;
+  }
+}
+
+/* Long identifiers must not force the shell wider than the viewport. */
+.sidebar__account-copy strong,
+.sidebar__account-copy small,
+.role-identity__value span,
+.top-bar__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

@@ -29,25 +29,37 @@ public class StudentService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AccessScope accessScope;
 
-    @Autowired
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
             EnrollmentRepository enrollmentRepository) {
 
+        this(studentRepository, userRepository, departmentRepository, enrollmentRepository, null);
+    }
+
+    @Autowired
+    public StudentService(
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            EnrollmentRepository enrollmentRepository,
+            AccessScope accessScope) {
+
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.accessScope = accessScope;
     }
 
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository) {
-        this(studentRepository, userRepository, departmentRepository, null);
+        this(studentRepository, userRepository, departmentRepository, null, null);
     }
 
     // Get all students
@@ -57,6 +69,28 @@ public class StudentService {
 
     public Page<Student> getStudentsPage(Pageable pageable) {
         return studentRepository.findAll(pageable);
+    }
+
+    /**
+     * Students the acting faculty member actually teaches.
+     *
+     * <p>The faculty directory is deliberately not a global student browser: a
+     * faculty member only ever sees students enrolled in one of their currently
+     * assigned courses.
+     */
+    public List<Student> getStudentsForAssignedCourses() {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+
+        List<Long> courseIds = accessScope.assignedCourseIds();
+
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+
+        return enrollmentRepository.findDistinctStudentsByCourseCourseIdIn(courseIds);
     }
 
     // Get student by ID

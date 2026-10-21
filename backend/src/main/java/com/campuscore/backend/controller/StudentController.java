@@ -8,8 +8,10 @@ import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
+import com.campuscore.backend.service.AccessScope;
 import com.campuscore.backend.service.StudentService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
@@ -28,14 +30,25 @@ public class StudentController {
     private final StudentService studentService;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final AccessScope accessScope;
 
     public StudentController(
             StudentService studentService,
             StudentRepository studentRepository,
             UserRepository userRepository) {
+        this(studentService, studentRepository, userRepository, null);
+    }
+
+        @Autowired
+    public StudentController(
+            StudentService studentService,
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            AccessScope accessScope) {
         this.studentService = studentService;
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
+        this.accessScope = accessScope;
     }
 
     @GetMapping("/me")
@@ -70,9 +83,15 @@ public class StudentController {
                     studentService.getStudentsPage(pageable), this::toResponse));
         }
 
+        // Administrators see the whole directory. Faculty only see the students
+        // they actually teach, so the directory cannot be used to browse every
+        // student in the institution.
+        List<Student> visible = accessScope.isAdmin()
+                ? studentService.getAllStudents()
+                : studentService.getStudentsForAssignedCourses();
+
         List<StudentResponse> students =
-                studentService.getAllStudents()
-                        .stream()
+                visible.stream()
                         .map(this::toResponse)
                         .toList();
 
@@ -81,16 +100,11 @@ public class StudentController {
 
     @GetMapping("/{id}")
     public ResponseEntity<StudentResponse> getStudentById(
-            @PathVariable Long id,
-            Authentication authentication) {
+            @PathVariable Long id) {
+
+        accessScope.requireStudentAccess(id);
 
         Student student = studentService.getStudentById(id);
-
-        boolean isStudent = hasRole(authentication, "ROLE_STUDENT");
-
-        if (isStudent && !isOwnStudent(authentication, id)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
 
         return ResponseEntity.ok(toResponse(student));
     }
@@ -104,23 +118,6 @@ public class StudentController {
         );
     }
 
-    private boolean isOwnStudent(
-            Authentication authentication,
-            Long studentId) {
-
-        User user = userRepository
-                .findByUsername(authentication.getName())
-                .orElse(null);
-
-        if (user == null) {
-            return false;
-        }
-
-        return studentRepository
-                .findByUserUserId(user.getUserId())
-                .map(student -> student.getStudentId().equals(studentId))
-                .orElse(false);
-    }
 
     private boolean hasRole(Authentication authentication, String role) {
         return authentication.getAuthorities().stream()

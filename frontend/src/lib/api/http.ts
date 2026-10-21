@@ -1,5 +1,5 @@
 import { ApiError, normalizeApiError } from './api-error'
-import { getAccessToken, handleUnauthorized } from '../../features/auth/session'
+import { getAccessToken, handleForbidden, handleUnauthorized } from '../../features/auth/session'
 
 const defaultBaseUrl = 'http://localhost:8080/api/v1'
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || defaultBaseUrl).replace(/\/$/, '')
@@ -64,6 +64,9 @@ export async function http<T>(path: string, options: RequestOptions = {}): Promi
     const error = normalizeApiError(response.status, payload, !authenticated && response.status === 401)
     if (response.status === 401 && shouldHandleUnauthorized) {
       handleUnauthorized()
+    }
+    if (response.status === 403 && shouldHandleUnauthorized) {
+      handleForbidden()
     }
     throw error
   }

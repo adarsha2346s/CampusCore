@@ -3,6 +3,7 @@ import {
   LayoutDashboard, LibraryBig, ListChecks, NotebookTabs, Users, UserRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { BorderGlow } from '../ui/BorderGlow'
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import type { Role } from '../../types/api'
@@ -11,6 +12,8 @@ interface NavItem {
   label: string
   path: string
   icon: LucideIcon
+  /** Nested items collapse into the parent link. */
+  matchPrefix?: boolean
 }
 
 interface NavGroup {
@@ -18,41 +21,66 @@ interface NavGroup {
   items: NavItem[]
 }
 
+/**
+ * Navigation is derived from the signed-in account's role only.
+ *
+ * Every entry points at a route that exists and is guarded by the backend. Items
+ * whose pages are not implemented yet are intentionally absent rather than shown
+ * as dead links, so nothing here can mislead a user about what is available.
+ */
 const navigation: Record<Role, NavGroup[]> = {
   ADMIN: [
-    { label: 'Workspace', items: [
-      { label: 'Overview', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Dashboard', items: [
+      { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     ] },
-    { label: 'Directory', items: [
+    { label: 'People', items: [
       { label: 'Users', path: '/admin/users', icon: Users },
       { label: 'Students', path: '/admin/students', icon: GraduationCap },
       { label: 'Faculty', path: '/admin/faculty', icon: UserRound },
+    ] },
+    { label: 'Academic', items: [
       { label: 'Departments', path: '/admin/departments', icon: Building2 },
       { label: 'Courses', path: '/admin/courses', icon: LibraryBig },
-    ] },
-    { label: 'Academic operations', items: [
       { label: 'Enrollments', path: '/admin/enrollments', icon: NotebookTabs },
       { label: 'Assessments', path: '/admin/assessments', icon: ClipboardCheck },
       { label: 'Marks', path: '/admin/marks', icon: ListChecks },
-      { label: 'Attendance', path: '/admin/attendance', icon: Activity },
+      { label: 'Attendance', path: '/admin/attendance', icon: Activity, matchPrefix: true },
       { label: 'Grading', path: '/admin/grading', icon: BookOpen },
     ] },
-    { label: 'Oversight', items: [
-      { label: 'Audit log', path: '/admin/audit', icon: FileClock },
+    { label: 'System', items: [
+      { label: 'Audit Logs', path: '/admin/audit', icon: FileClock },
     ] },
   ],
-  FACULTY: [{ label: 'Workspace', items: [
-    { label: 'Overview', path: '/faculty/dashboard', icon: LayoutDashboard },
-    { label: 'Students', path: '/faculty/students', icon: GraduationCap },
-    { label: 'Departments', path: '/faculty/departments', icon: Building2 },
-    { label: 'Course catalog', path: '/faculty/courses', icon: LibraryBig },
-  ] }],
-  STUDENT: [{ label: 'Workspace', items: [
-    { label: 'Overview', path: '/student/dashboard', icon: LayoutDashboard },
-    { label: 'My profile', path: '/student/profile', icon: UserRound },
-    { label: 'Course catalog', path: '/student/courses', icon: LibraryBig },
-    { label: 'GPA', path: '/student/gpa', icon: BookOpen },
-  ] }],
+  FACULTY: [
+    { label: 'Dashboard', items: [
+      { label: 'Dashboard', path: '/faculty/dashboard', icon: LayoutDashboard },
+    ] },
+    { label: 'Teaching', items: [
+      { label: 'My Courses', path: '/faculty/courses', icon: LibraryBig },
+      { label: 'Assessments', path: '/faculty/assessments', icon: ClipboardCheck },
+      { label: 'Marks', path: '/faculty/marks', icon: ListChecks },
+      { label: 'Attendance', path: '/faculty/attendance', icon: Activity },
+      { label: 'My Students', path: '/faculty/students', icon: GraduationCap },
+    ] },
+    { label: 'Reference', items: [
+      { label: 'Course Catalog', path: '/faculty/courses/catalog', icon: BookOpen },
+      { label: 'Departments', path: '/faculty/departments', icon: Building2 },
+    ] },
+  ],
+  STUDENT: [
+    { label: 'Dashboard', items: [
+      { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
+    ] },
+    { label: 'Academic', items: [
+      { label: 'My Courses', path: '/student/courses', icon: LibraryBig },
+      { label: 'My Marks', path: '/student/marks', icon: ListChecks },
+      { label: 'My Attendance', path: '/student/attendance', icon: Activity },
+      { label: 'GPA', path: '/student/gpa', icon: BookOpen },
+    ] },
+    { label: 'Profile', items: [
+      { label: 'My Profile', path: '/student/profile', icon: UserRound },
+    ] },
+  ],
 }
 
 export function RoleNavigation({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
@@ -92,22 +120,27 @@ export function RoleNavigation({ role, onNavigate }: { role: Role; onNavigate?: 
   }, [location.pathname, role])
 
   return (
-    <nav className="side-nav" ref={navRef} aria-label="Main navigation">
+    <nav className="side-nav" ref={navRef} aria-label={`${role} navigation`}>
       <span className="side-nav__indicator" ref={indicatorRef} aria-hidden="true" />
       {navigation[role].map(({ label, items }) => (
         <div className="side-nav__group" key={label}>
           <p className="side-nav__label">{label}</p>
-          {items.map(({ label: itemLabel, path, icon: Icon }) => (
+          {items.map(({ label: itemLabel, path, icon: Icon, matchPrefix }) => (
             <NavLink
               key={path}
               to={path}
               viewTransition
               onClick={onNavigate}
               className={({ isActive }) => `side-nav__link${isActive ? ' is-active' : ''}`}
-              end={path !== '/admin/attendance'}
+              end={!matchPrefix}
             >
-              <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
-              <span>{itemLabel}</span>
+              {({ isActive }) => (
+                <>
+                  {isActive && <BorderGlow className="side-nav__glow" />}
+                  <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
+                  <span>{itemLabel}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </div>

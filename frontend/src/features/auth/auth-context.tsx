@@ -4,7 +4,13 @@ import type { PropsWithChildren } from 'react'
 import { queryClient } from '../../lib/api/query-client'
 import type { LoginRequest, MeResponse, Role } from '../../types/api'
 import { getCurrentUser, loginRequest } from './auth.api'
-import { clearSession, registerUnauthorizedHandler, setAccessToken } from './session'
+import {
+  clearSession,
+  getAccessToken,
+  registerForbiddenHandler,
+  registerUnauthorizedHandler,
+  setAccessToken,
+} from './session'
 
 interface AuthContextValue {
   user: MeResponse | null
@@ -22,6 +28,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => registerUnauthorizedHandler(() => {
     setUser(null)
     queryClient.clear()
+  }), [])
+
+  // The API is authoritative about the role: it re-reads authorities from the
+  // database on every request, so a role change or deactivation takes effect at
+  // once. When the server answers 403 the shell re-reads the identity so the
+  // navigation can never keep displaying privileges the server no longer grants.
+  useEffect(() => registerForbiddenHandler(() => {
+    if (!getAccessToken()) return
+    let cancelled = false
+    void getCurrentUser()
+      .then((fresh) => {
+        if (cancelled) return
+        queryClient.clear()
+        setUser(fresh)
+      })
+      .catch(() => {
+        // Identity could not be re-read: drop the session rather than keep a
+        // shell that may be showing a stale role.
+        if (cancelled) return
+        clearSession()
+        setUser(null)
+        queryClient.clear()
+      })
+    return () => {
+      cancelled = true
+    }
   }), [])
 
   const logout = useCallback(() => {

@@ -38,12 +38,30 @@ public class AttendanceSession {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * Optimistic locking version.
+     *
+     * <p>Attendance records are filed against a session, so a stale session edit
+     * must be rejected rather than silently overwriting a corrected date.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     public AttendanceSession() {
     }
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Long getAttendanceSessionId() {

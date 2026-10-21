@@ -41,7 +41,25 @@ public class Assessment {
     @Column(name = "assessment_date")
     private LocalDate assessmentDate;
 
+    /**
+     * Optimistic locking version.
+     *
+     * <p>An assessment edit changes the ceiling and weight applied to every mark
+     * recorded against it, so a stale write must be rejected rather than merged.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     public Assessment() {
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Long getAssessmentId() {

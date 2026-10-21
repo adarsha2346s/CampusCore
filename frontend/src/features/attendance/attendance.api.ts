@@ -49,3 +49,58 @@ export const getAttendanceRecordsByEnrollment = (id: number) => http<AttendanceR
 export const getAttendanceRecordsBySessionPage = (id: number, page: number, size: number) => http<PageResponse<AttendanceRecordResponse>>(`attendance-records/session/${id}`, { query: { page, size } })
 export const getAttendanceRecordsByEnrollmentPage = (id: number, page: number, size: number) => http<PageResponse<AttendanceRecordResponse>>(`attendance-records/enrollment/${id}`, { query: { page, size } })
 export const createAttendanceRecord = (request: AttendanceRecordCreateRequest) => http<AttendanceRecordResponse>('attendance-records', { method: 'POST', query: { ...request } })
+
+/**
+ * Payload for changing an attendance session.
+ *
+ * Course and faculty are omitted by design: attendance records are filed against
+ * the session, so the server keeps the offering and lecturer it was taken under.
+ */
+export interface AttendanceSessionUpdateRequest {
+  sessionDate: string
+  topic: string
+}
+
+/**
+ * Update a session's date and topic.
+ *
+ * Allowed even when attendance has been recorded: correcting a mistyped date does
+ * not change what was recorded.
+ */
+export const updateAttendanceSession = (id: number, request: AttendanceSessionUpdateRequest) =>
+  http<AttendanceSessionResponse>(`attendance-sessions/${id}`, { method: 'PUT', body: request })
+
+/**
+ * Delete an attendance session.
+ *
+ * Rejected with 409 while attendance records exist for it, since those rows are
+ * the child records of the session.
+ */
+export const deleteAttendanceSession = (id: number) =>
+  http<void>(`attendance-sessions/${id}`, { method: 'DELETE' })
+
+/** The signed-in student's own attendance, with course and session already joined. */
+export interface StudentAttendance {
+  attendanceRecordId: number
+  attendanceSessionId: number
+  courseCode: string
+  courseName: string
+  sessionDate: string
+  topic: string | null
+  status: string
+  markedAt: string | null
+}
+
+export const studentAttendanceKeys = {
+  mine: ['student', 'attendance-records', 'me'] as const,
+}
+
+/**
+ * The caller's own attendance.
+ *
+ * Backed by GET /api/v1/attendance-records/me, which is student-only and takes no
+ * identifier. The workspace previously called the institution-wide session listing
+ * at GET /api/v1/attendance-sessions, which is administrator-only, so a student
+ * asking for their own attendance was refused outright.
+ */
+export const getMyAttendance = () => http<StudentAttendance[]>('attendance-records/me')

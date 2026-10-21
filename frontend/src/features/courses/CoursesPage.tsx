@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Archive, BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
@@ -17,7 +17,7 @@ import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
 import { departmentKeys, getDepartments } from '../departments/departments.api'
 import { CourseFormDialog } from './CourseFormDialog'
-import { createCourse, courseKeys, deleteCourse, getCoursesPage, updateCourse } from './courses.api'
+import { createCourse, courseKeys, deactivateCourse, deleteCourse, getCoursesPage, updateCourse } from './courses.api'
 import type { CourseRequest, CourseResponse } from '../../types/api'
 
 export function CoursesPage() {
@@ -35,6 +35,7 @@ export function CoursesPage() {
   const create = useMutation({ mutationFn: createCourse, onSuccess: async () => { await refresh(); setFormOpen(false); toast.success('Course created') } })
   const update = useMutation({ mutationFn: ({ id, request }: { id: number; request: CourseRequest }) => updateCourse(id, request), onSuccess: async () => { await refresh(); setFormOpen(false); setEditing(null); toast.success('Course updated') } })
   const remove = useMutation({ mutationFn: deleteCourse, onSuccess: async () => { await refresh(); toast.success('Course deleted') } })
+  const deactivate = useMutation({ mutationFn: deactivateCourse, onSuccess: async () => { await refresh(); toast.success('Course deactivated') } })
   const departmentById = useMemo(() => new Map((departments.data ?? []).map((department) => [department.departmentId, department])), [departments.data])
   const filtered = useMemo(() => (courses.data?.content ?? []).filter((course) => {
     const department = departmentById.get(course.departmentId)
@@ -68,6 +69,18 @@ export function CoursesPage() {
             <div className="row-actions">
               <Button size="sm" variant="ghost" aria-label={`Edit ${course.courseCode}`} title="Edit course" onClick={() => { setEditing(course); setFormOpen(true) }}><Pencil size={16} /></Button>
               <ConfirmDialog title="Delete course?" description={`Delete ${course.courseCode} — ${course.courseName}? The backend may reject deletion while related enrollments or assessments exist.`} confirmLabel="Delete course" onConfirm={async () => { try { await remove.mutateAsync(course.courseId) } catch (error) { notifyError(error, 'The course could not be deleted.'); throw error } }} trigger={<Button size="sm" variant="ghost" aria-label={`Delete ${course.courseCode}`} title="Delete course"><Trash2 size={16} /></Button>} />
+              {course.status === 'ACTIVE' && (
+                <ConfirmDialog
+                  title="Deactivate course?"
+                  description={`Retire ${course.courseCode} — ${course.courseName}? It stays in the catalog with its enrollments, marks and attendance intact, but is no longer offered for new enrollment. This cannot be undone from the admin workspace.`}
+                  confirmLabel="Deactivate course"
+                  onConfirm={async () => {
+                    try { await deactivate.mutateAsync(course.courseId) }
+                    catch (error) { notifyError(error, 'The course could not be deactivated.'); throw error }
+                  }}
+                  trigger={<Button size="sm" variant="ghost" aria-label={`Deactivate ${course.courseCode}`} title="Deactivate course"><Archive size={16} /></Button>}
+                />
+              )}
             </div>
           )} />
         )}

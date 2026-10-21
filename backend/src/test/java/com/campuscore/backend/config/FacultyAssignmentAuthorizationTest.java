@@ -169,11 +169,13 @@ class FacultyAssignmentAuthorizationTest {
     }
 
     @Test
-    void theWriteRuleIsScopedToTheAssignmentPath() {
-        // A POST to another course sub-path must keep the previous behaviour, so
-        // the new rule is not silently widened to all of /courses/**.
-        assertEquals(200, dispatch("POST", "/api/v1/courses/12/some-other-action", STUDENT).getStatus());
+    void courseSubPathMutationsAreNoLongerInheritedByAnyRole() {
+        // Phase 2 closed the authorization fall-through: a POST to an unlisted
+        // course sub-path used to be accepted for any signed-in role.
+        assertEquals(403, dispatch("POST", "/api/v1/courses/12/some-other-action", STUDENT).getStatus());
+        assertEquals(403, dispatch("POST", "/api/v1/courses/12/some-other-action", FACULTY).getStatus());
         assertEquals(403, dispatch("POST", "/api/v1/courses", STUDENT).getStatus());
+        assertEquals(200, dispatch("POST", "/api/v1/courses", ADMIN).getStatus());
     }
 
     // ------------------------------------------------------------------

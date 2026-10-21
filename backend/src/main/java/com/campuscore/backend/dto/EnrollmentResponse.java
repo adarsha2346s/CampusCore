@@ -10,6 +10,18 @@ public class EnrollmentResponse {
     private String enrollmentDate;
     private String status;
 
+    /**
+     * Identity of the enrolled student.
+     *
+     * <p>Included so a faculty member reading the enrollments of a course they
+     * teach sees who is enrolled rather than a bare identifier. Every route that
+     * returns this DTO is either administrator-only or already scoped to the
+     * caller's own records, so this adds no disclosure.
+     */
+    private String enrollmentNumber;
+    private String studentFirstName;
+    private String studentLastName;
+
     public EnrollmentResponse() {
     }
 
@@ -20,7 +32,10 @@ public class EnrollmentResponse {
             String semester,
             String academicYear,
             String enrollmentDate,
-            String status) {
+            String status,
+            String enrollmentNumber,
+            String studentFirstName,
+            String studentLastName) {
 
         this.enrollmentId = enrollmentId;
         this.studentId = studentId;
@@ -29,6 +44,9 @@ public class EnrollmentResponse {
         this.academicYear = academicYear;
         this.enrollmentDate = enrollmentDate;
         this.status = status;
+        this.enrollmentNumber = enrollmentNumber;
+        this.studentFirstName = studentFirstName;
+        this.studentLastName = studentLastName;
     }
 
     public Long getEnrollmentId() {
@@ -57,5 +75,17 @@ public class EnrollmentResponse {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getEnrollmentNumber() {
+        return enrollmentNumber;
+    }
+
+    public String getStudentFirstName() {
+        return studentFirstName;
+    }
+
+    public String getStudentLastName() {
+        return studentLastName;
     }
 }

@@ -157,25 +157,28 @@ class CourseDeactivationAuthorizationTest {
     }
 
     @Test
-    void courseReadsStayAvailableToAnyAuthenticatedUser() {
+    void courseCatalogStaysReadableByAnyAuthenticatedUser() {
         assertEquals(200, dispatch("GET", "/api/v1/courses", STUDENT).getStatus());
         assertEquals(200, dispatch("GET", "/api/v1/courses/12", STUDENT).getStatus());
-        assertEquals(200, dispatch("GET", "/api/v1/courses/12/dependencies", STUDENT).getStatus());
         assertEquals(401, dispatch("GET", "/api/v1/courses", null).getStatus());
     }
 
     @Test
-    void theNewRuleDoesNotCaptureOtherCourseSubPaths() {
-        // POST to a course sub-path other than /deactivate must keep the previous
-        // anyRequest().authenticated() behaviour, proving the rule is scoped to
-        // the deactivate endpoint instead of widening POST across /courses/**.
-        assertEquals(200, dispatch("POST", "/api/v1/courses/12/not-deactivate", STUDENT).getStatus());
-        assertEquals(200, dispatch("POST", "/api/v1/courses/12/deactivate/extra", STUDENT).getStatus());
+    void courseDependencySummaryIsNowAdminOnly() {
+        // Phase 2 tightened this: dependency summaries expose record counts and
+        // were previously readable by any signed-in user.
+        assertEquals(200, dispatch("GET", "/api/v1/courses/12/dependencies", ADMIN).getStatus());
+        assertEquals(403, dispatch("GET", "/api/v1/courses/12/dependencies", STUDENT).getStatus());
+        assertEquals(403, dispatch("GET", "/api/v1/courses/12/dependencies", FACULTY).getStatus());
     }
 
     @Test
-    void deactivationIsRejectedForOtherVerbsToo() {
-        assertEquals(200, dispatch("GET", "/api/v1/courses/12/deactivate", STUDENT).getStatus());
+    void courseSubPathMutationsAreNoLongerInheritedByAnyRole() {
+        // These previously fell through to anyRequest().authenticated(). The
+        // role matrix now lists every /api/v1 path and denies the remainder.
+        assertEquals(403, dispatch("POST", "/api/v1/courses/12/not-deactivate", STUDENT).getStatus());
+        assertEquals(403, dispatch("POST", "/api/v1/courses/12/deactivate/extra", STUDENT).getStatus());
+        assertEquals(403, dispatch("GET", "/api/v1/courses/12/deactivate", STUDENT).getStatus());
         assertEquals(403, dispatch("PUT", "/api/v1/courses/12/deactivate", STUDENT).getStatus());
         assertEquals(403, dispatch("DELETE", "/api/v1/courses/12/deactivate", STUDENT).getStatus());
     }
