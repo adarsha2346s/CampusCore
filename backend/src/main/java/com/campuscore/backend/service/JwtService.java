@@ -17,7 +17,7 @@ public class JwtService {
 
     public JwtService(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long expirationTime) {
+            @Value("${jwt.expiration:86400000}") long expirationTime) {
 
         this.signingKey = Keys.hmacShaKeyFor(
                 secret.getBytes(java.nio.charset.StandardCharsets.UTF_8)

@@ -31,6 +31,11 @@ jobs:
         run: |
           mysql --protocol=tcp -h 127.0.0.1 -uroot -e 'CREATE DATABASE campuscore'
           mysql --protocol=tcp -h 127.0.0.1 -uroot < backend/database/schema.sql
+      - name: Seed disposable integration data
+        # The integration tests run against a real database. This database is
+        # created and destroyed by the runner, so the synthetic demo seed is
+        # applied to it and never to a shared or production database.
+        run: mysql --protocol=tcp -h 127.0.0.1 -uroot < backend/database/demo-data.sql
       - name: Compile and test backend
         working-directory: backend
         env:
@@ -38,9 +43,22 @@ jobs:
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: ''
           JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+          JWT_EXPIRATION: '86400000'
         run: |
           if [ -z "$JWT_SECRET" ]; then JWT_SECRET="$(openssl rand -base64 48)"; export JWT_SECRET; fi
           ./mvnw -B clean test
+      - name: Run integration tests against MySQL
+        # The *IT classes are excluded from the default Surefire includes, so they
+        # are invoked explicitly here. They need a real datasource and the
+        # migrated schema, and they prove the optimistic-locking guarantee that
+        # mocks cannot. BackendApplicationTests joins them because loading the
+        # full application context needs a datasource as well.
+        working-directory: backend
+        run: |
+          ./mvnw -B test -Dtest='*IT,BackendApplicationTests' -DfailIfNoSpecifiedTests=false \
+            -Dcc.it.datasource.url=jdbc:mysql://127.0.0.1:3306/campuscore \
+            -Dcc.it.datasource.username=root \
+            -Dcc.it.datasource.password=
 
   frontend:
     runs-on: ubuntu-latest
@@ -54,6 +72,10 @@ jobs:
       - run: npm ci
         working-directory: frontend
       - run: npm run lint
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: npm run test
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
