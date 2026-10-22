@@ -3,6 +3,7 @@ package com.campuscore.backend.service;
 import com.campuscore.backend.dto.ResourceDependencySummary;
 import com.campuscore.backend.dto.StudentRequest;
 import com.campuscore.backend.entity.Department;
+import com.campuscore.backend.entity.Enrollment;
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.exception.ResourceConflictException;
@@ -98,6 +99,37 @@ public class StudentService {
         }
 
         return studentRepository.findDistinctByCourseCourseIdIn(courseIds, pageable);
+    }
+
+    /**
+     * A student's enrollments, scoped to what the caller may see.
+     *
+     * <p>An administrator receives every enrollment the student holds. A faculty
+     * member receives only the enrollments in the courses they currently teach,
+     * so a teacher never receives the courses they are not assigned to, and the
+     * caller never has to filter the result themselves.
+     *
+     * <p>The filtering happens in the database query rather than in the browser,
+     * so the response only ever contains what the caller is entitled to.
+     */
+    public List<Enrollment> getEnrollmentsForStudent(Long studentId) {
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+
+        if (accessScope.isAdmin()) {
+            return enrollmentRepository.findByStudentStudentId(studentId);
+        }
+
+        List<Long> courseIds = accessScope.assignedCourseIds();
+
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+
+        return enrollmentRepository.findByStudentStudentIdAndCourseCourseIdIn(
+                studentId, courseIds);
     }
 
     /**

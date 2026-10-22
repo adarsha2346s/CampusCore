@@ -28,7 +28,7 @@ Do not capture real personal records, credentials, or tokens.
 ## Features and roles
 
 - **ADMIN:** user and student directory management, faculty creation, departments and courses, faculty-course assignment management, enrollments, assessments, marks, attendance, grading policies, GPA lookup, and read-only audit logs. Available operations follow the existing API methods.
-- **FACULTY:** authenticated faculty profile, own assigned teaching courses, the students of those courses, course-scoped assessments, marks, attendance and enrollments, course catalog, and department catalog. Teaching data is scoped to the assignments the server reports for the signed-in account.
+- **FACULTY:** authenticated faculty profile, own assigned teaching courses, the students of those courses with their enrollments and attendance, course-scoped assessments, marks, attendance and enrollments, course catalog, and department catalog. Teaching data is scoped to the assignments the server reports for the signed-in account.
 - **STUDENT:** authenticated self profile, personal dashboard, own enrollment list, own enrollment GPA lookup, and the course catalog.
 - Responsive role workspaces with form validation, search/filtering on loaded lists, detail dialogs, and loading, empty, error, and mutation feedback states.
 
@@ -85,6 +85,8 @@ In production the three tiers are hosted separately: Vercel builds and serves th
 ## Core modules and API
 
 The versioned REST API is rooted at `/api/v1`. Modules include authentication (`/auth`), users, students, faculty, departments, courses, enrollments, assessments, marks, attendance sessions and records, grading policies/GPA, audit logs, and the student dashboard. The frontend uses these existing API routes; create operations that are query-parameter based follow their controller contracts.
+
+A student's enrollments are served by `GET /api/v1/students/{id}/enrollments`. An administrator receives every enrollment the student holds; a faculty member receives only the ones in the courses they currently teach, so the response never carries a course the caller is not assigned to teach. A faculty member who does not teach the student at all is refused.
 
 Major collection endpoints support server-side pagination when both `page` and `size` query parameters are supplied. Page numbers are zero-based and page size is limited to 1–100. The response contains `content`, `page`, `size`, `totalElements`, and `totalPages`. Omitting both parameters preserves the legacy array response for backward compatibility. Departments remain a small unpaginated reference list, and `/enrollments/me` remains an authenticated user's array response. Detail, GPA, and dashboard endpoints are unchanged; not every endpoint is paginated.
 
@@ -183,7 +185,6 @@ Production verification has been completed against the deployed stack. The Verce
 
 ## Known limitations
 
-- The Faculty Student 360 drawer reads administrator-only endpoints, so it renders an error for a faculty member. The faculty-facing data it needs is not yet served by a faculty-scoped endpoint.
 - No demo account credentials are published in this README; access to the hosted demo requires credentials from the project operator.
 - The frontend project does not include an automated browser/E2E test suite.
 - JWT sessions are memory-only and require login after reload; no refresh-token endpoint exists.

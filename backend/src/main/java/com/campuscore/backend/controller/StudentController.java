@@ -1,9 +1,11 @@
 package com.campuscore.backend.controller;
 
 import com.campuscore.backend.dto.StudentResponse;
+import com.campuscore.backend.dto.EnrollmentResponse;
 import com.campuscore.backend.dto.PageResponse;
 import com.campuscore.backend.lib.PageParameters;
 import com.campuscore.backend.dto.StudentSelfResponse;
+import com.campuscore.backend.entity.Enrollment;
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.StudentRepository;
@@ -119,6 +121,30 @@ public class StudentController {
         return ResponseEntity.ok(
                 studentService.getStudentDependencies(id)
         );
+    }
+
+    /**
+     * A student's enrollments, scoped to the caller.
+     *
+     * <p>Ownership is checked here, exactly as it is for the student record
+     * itself: an administrator may read any student's enrollments, and a faculty
+     * member only a student they actually teach. The service then narrows the
+     * result to the courses the caller teaches, so the response never carries
+     * the student's courses that are outside the caller's teaching scope.
+     */
+    @GetMapping("/{id}/enrollments")
+    public ResponseEntity<List<EnrollmentResponse>> getStudentEnrollments(
+            @PathVariable Long id) {
+
+        accessScope.requireStudentAccess(id);
+
+        List<EnrollmentResponse> enrollments =
+                studentService.getEnrollmentsForStudent(id)
+                        .stream()
+                        .map(EnrollmentResponse::from)
+                        .toList();
+
+        return ResponseEntity.ok(enrollments);
     }
 
 

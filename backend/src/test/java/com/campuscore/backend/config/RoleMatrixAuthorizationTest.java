@@ -201,6 +201,7 @@ class RoleMatrixAuthorizationTest {
                 {"GET", "/api/v1/audit-logs"},
                 {"GET", "/api/v1/audit-logs/user/1"},
                 {"GET", "/api/v1/students/1/dependencies"},
+                {"GET", "/api/v1/students/1/enrollments"},
                 {"GET", "/api/v1/courses/1/dependencies"},
         };
 
@@ -534,6 +535,7 @@ class RoleMatrixAuthorizationTest {
                 {"GET", "/api/v1/students"},
                 {"GET", "/api/v1/students/1"},
                 {"GET", "/api/v1/students/1/dependencies"},
+                {"GET", "/api/v1/students/1/enrollments"},
                 {"POST", "/api/v1/students"},
                 {"PUT", "/api/v1/students/1"},
                 {"DELETE", "/api/v1/students/1"},

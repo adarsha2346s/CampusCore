@@ -299,6 +299,18 @@ public class SecurityConfig {
                         )
                         .hasAnyRole("ADMIN", "FACULTY")
 
+                        // A student's enrollments, for the administrator and for
+                        // the faculty members who teach that student. The
+                        // ownership check is AccessScope.requireStudentAccess,
+                        // and the service narrows the result to the caller's own
+                        // courses, so the response never carries the courses the
+                        // caller is not assigned to teach.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/students/*/enrollments"
+                        )
+                        .hasAnyRole("ADMIN", "FACULTY")
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/faculty"

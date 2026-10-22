@@ -1,5 +1,9 @@
 package com.campuscore.backend.dto;
 
+import com.campuscore.backend.entity.Course;
+import com.campuscore.backend.entity.Enrollment;
+import com.campuscore.backend.entity.Student;
+
 public class EnrollmentResponse {
 
     private Long enrollmentId;
@@ -47,6 +51,35 @@ public class EnrollmentResponse {
         this.enrollmentNumber = enrollmentNumber;
         this.studentFirstName = studentFirstName;
         this.studentLastName = studentLastName;
+    }
+
+    /**
+     * Maps an enrollment to its response.
+     *
+     * <p>One mapping, so every route that returns an enrollment describes it the
+     * same way. The student and course associations have to be initialised: the
+     * response surfaces both, and the mapping runs outside the service
+     * transaction.
+     */
+    public static EnrollmentResponse from(Enrollment enrollment) {
+        Student student = enrollment.getStudent();
+        Course course = enrollment.getCourse();
+
+        String enrollmentDate = enrollment.getEnrollmentDate() == null
+                ? null
+                : enrollment.getEnrollmentDate().toString();
+
+        return new EnrollmentResponse(
+                enrollment.getEnrollmentId(),
+                student.getStudentId(),
+                course.getCourseId(),
+                enrollment.getSemester(),
+                enrollment.getAcademicYear(),
+                enrollmentDate,
+                enrollment.getStatus().name(),
+                student.getEnrollmentNumber(),
+                student.getFirstName(),
+                student.getLastName());
     }
 
     public Long getEnrollmentId() {

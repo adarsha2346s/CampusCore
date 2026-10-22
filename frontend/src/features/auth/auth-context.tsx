@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import { queryClient } from '../../lib/api/query-client'
 import type { LoginRequest, MeResponse, Role } from '../../types/api'
@@ -24,6 +24,11 @@ const supportedRoles: Role[] = ['ADMIN', 'FACULTY', 'STUDENT']
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<MeResponse | null>(null)
+  const roleRef = useRef<Role | undefined>(undefined)
+
+  useEffect(() => {
+    roleRef.current = user?.role
+  }, [user])
 
   useEffect(() => registerUnauthorizedHandler(() => {
     setUser(null)
@@ -34,14 +39,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
   // database on every request, so a role change or deactivation takes effect at
   // once. When the server answers 403 the shell re-reads the identity so the
   // navigation can never keep displaying privileges the server no longer grants.
+  //
+  // A 403 is not always a privilege change. It is also the ordinary answer to a
+  // request for a record that is outside the caller's scope, and that must not
+  // empty the cache: doing so threw away every other workspace's data and
+  // refetched it, which turned one refused record into a storm of requests.
+  // So the cache is only touched when the identity actually changed, and then
+  // only for the administrator-scoped entries, which are the ones a role change
+  // can take away.
   useEffect(() => registerForbiddenHandler(() => {
     if (!getAccessToken()) return
     let cancelled = false
     void getCurrentUser()
       .then((fresh) => {
         if (cancelled) return
-        queryClient.clear()
+        const previousRole = roleRef.current
         setUser(fresh)
+        if (fresh.role !== previousRole) {
+          void queryClient.invalidateQueries({ queryKey: ['admin'] })
+        }
       })
       .catch(() => {
         // Identity could not be re-read: drop the session rather than keep a

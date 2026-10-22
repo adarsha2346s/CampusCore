@@ -8,16 +8,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
  * Queries are created with retries disabled and caching off, so a test that
  * asserts a loading state actually observes it and a test that asserts real data
  * is not served from a previous test's cache.
+ *
+ * A caller that needs to observe caching itself can pass its own client, for
+ * instance one with a long stale time, to check that a repeated interaction
+ * reuses what was already fetched.
  */
-export function renderWithProviders(ui: ReactElement): RenderResult {
-  const client = new QueryClient({
+export function renderWithProviders(ui: ReactElement, client?: QueryClient): RenderResult {
+  const queryClient = client ?? new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
     },
   })
 
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
 }
 
 /** A student mark exactly as GET /api/v1/marks/me returns it. */

@@ -165,27 +165,8 @@ public class EnrollmentController {
     }
 
     private EnrollmentResponse toResponse(Enrollment enrollment) {
-
-        String enrollmentDate = null;
-
-        if (enrollment.getEnrollmentDate() != null) {
-            enrollmentDate =
-                    enrollment.getEnrollmentDate().toString();
-        }
-
-        Student student = enrollment.getStudent();
-
-        return new EnrollmentResponse(
-                enrollment.getEnrollmentId(),
-                student.getStudentId(),
-                enrollment.getCourse().getCourseId(),
-                enrollment.getSemester(),
-                enrollment.getAcademicYear(),
-                enrollmentDate,
-                enrollment.getStatus().name(),
-                student.getEnrollmentNumber(),
-                student.getFirstName(),
-                student.getLastName()
-        );
+        // One mapping, shared with the other route that returns an enrollment,
+        // so both describe a record the same way.
+        return EnrollmentResponse.from(enrollment);
     }
 }
