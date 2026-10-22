@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.dto.AssessmentRequest;
 import com.campuscore.backend.entity.Assessment;
 import com.campuscore.backend.entity.Course;
@@ -50,7 +52,7 @@ class AssessmentLifecycleTest {
                 assessments,
                 mock(CourseRepository.class),
                 mock(AccessScope.class),
-                marks);
+                marks, mock(AuditLogService.class));
     }
 
     private Assessment existing() {
@@ -218,7 +220,7 @@ class AssessmentLifecycleTest {
         when(assessments.findById(ASSESSMENT_ID)).thenReturn(Optional.of(stored));
 
         AssessmentService unwired = new AssessmentService(
-                assessments, mock(CourseRepository.class), mock(AccessScope.class), null);
+                assessments, mock(CourseRepository.class), mock(AccessScope.class), null, mock(AuditLogService.class));
 
         ResourceConflictException updateFailure = assertThrows(
                 ResourceConflictException.class,
@@ -238,7 +240,7 @@ class AssessmentLifecycleTest {
     @DisplayName("Course is resolved from the stored assessment, not the request")
     void courseLookupUntouchedOnUpdate() {
         CourseRepository courses = mock(CourseRepository.class);
-        AssessmentService scoped = new AssessmentService(assessments, courses, mock(AccessScope.class), marks);
+        AssessmentService scoped = new AssessmentService(assessments, courses, mock(AccessScope.class), marks, mock(AuditLogService.class));
 
         Assessment stored = existing();
         when(assessments.findById(ASSESSMENT_ID)).thenReturn(Optional.of(stored));

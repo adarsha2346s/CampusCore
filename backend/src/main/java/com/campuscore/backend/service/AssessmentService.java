@@ -26,19 +26,23 @@ public class AssessmentService {
 
     private final MarkRepository markRepository;
 
+    private final AuditLogService auditLogService;
+
     public AssessmentService(
             AssessmentRepository assessmentRepository,
-            CourseRepository courseRepository) {
+            CourseRepository courseRepository,
+            AuditLogService auditLogService) {
 
-        this(assessmentRepository, courseRepository, null, null);
+        this(assessmentRepository, courseRepository, null, null, auditLogService);
     }
 
     public AssessmentService(
             AssessmentRepository assessmentRepository,
             CourseRepository courseRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
-        this(assessmentRepository, courseRepository, accessScope, null);
+        this(assessmentRepository, courseRepository, accessScope, null, auditLogService);
     }
 
         @Autowired
@@ -46,12 +50,14 @@ public class AssessmentService {
             AssessmentRepository assessmentRepository,
             CourseRepository courseRepository,
             AccessScope accessScope,
-            MarkRepository markRepository) {
+            MarkRepository markRepository,
+            AuditLogService auditLogService) {
 
         this.assessmentRepository = assessmentRepository;
         this.courseRepository = courseRepository;
         this.accessScope = accessScope;
         this.markRepository = markRepository;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -120,7 +126,17 @@ public class AssessmentService {
         assessment.setMaxMarks(maxMarks);
         assessment.setWeight(weight);
 
-        return assessmentRepository.save(assessment);
+        Assessment saved = assessmentRepository.save(assessment);
+
+        auditLogService.record(
+                "CREATE_ASSESSMENT",
+                "Assessment",
+                saved.getAssessmentId(),
+                "Created assessment " + saved.getName() + " in course " + courseId
+                        + " out of " + saved.getMaxMarks()
+        );
+
+        return saved;
     }
 
     /**
@@ -153,7 +169,17 @@ public class AssessmentService {
         assessment.setWeight(request.getWeight());
         assessment.setAssessmentDate(request.getAssessmentDate());
 
-        return assessmentRepository.save(assessment);
+        Assessment saved = assessmentRepository.save(assessment);
+
+        auditLogService.record(
+                "UPDATE_ASSESSMENT",
+                "Assessment",
+                saved.getAssessmentId(),
+                "Updated assessment " + saved.getName() + " in course "
+                        + saved.getCourse().getCourseId()
+        );
+
+        return saved;
     }
 
     /**
@@ -176,6 +202,14 @@ public class AssessmentService {
         }
 
         assessmentRepository.delete(assessment);
+
+        auditLogService.record(
+                "DELETE_ASSESSMENT",
+                "Assessment",
+                assessment.getAssessmentId(),
+                "Deleted assessment " + assessment.getName() + " in course "
+                        + assessment.getCourse().getCourseId()
+        );
     }
 
     /**

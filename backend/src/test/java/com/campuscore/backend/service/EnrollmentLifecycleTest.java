@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Enrollment;
 import com.campuscore.backend.entity.Student;
@@ -56,7 +58,7 @@ class EnrollmentLifecycleTest {
                 mock(CourseRepository.class),
                 mock(AccessScope.class),
                 marks,
-                records);
+                records, mock(AuditLogService.class));
     }
 
     private Enrollment existing() {
@@ -247,7 +249,7 @@ class EnrollmentLifecycleTest {
         EnrollmentService unscoped = new EnrollmentService(
                 enrollments,
                 mock(StudentRepository.class),
-                mock(CourseRepository.class));
+                mock(CourseRepository.class), mock(AuditLogService.class));
         when(enrollments.findById(ENROLLMENT_ID)).thenReturn(Optional.of(existing()));
 
         assertThrows(ResourceConflictException.class, () -> unscoped.deleteEnrollment(ENROLLMENT_ID));
@@ -259,7 +261,7 @@ class EnrollmentLifecycleTest {
         EnrollmentService unscoped = new EnrollmentService(
                 enrollments,
                 mock(StudentRepository.class),
-                mock(CourseRepository.class));
+                mock(CourseRepository.class), mock(AuditLogService.class));
         when(enrollments.findById(ENROLLMENT_ID)).thenReturn(Optional.of(existing()));
 
         assertThrows(ResourceConflictException.class, () -> unscoped.updateEnrollment(

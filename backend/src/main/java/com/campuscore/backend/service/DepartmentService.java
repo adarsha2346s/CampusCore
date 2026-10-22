@@ -22,21 +22,26 @@ public class DepartmentService {
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
     private final CourseRepository courseRepository;
+    private final AuditLogService auditLogService;
 
     @Autowired
     public DepartmentService(
             DepartmentRepository departmentRepository,
             StudentRepository studentRepository,
             FacultyRepository facultyRepository,
-            CourseRepository courseRepository) {
+            CourseRepository courseRepository,
+            AuditLogService auditLogService) {
         this.departmentRepository = departmentRepository;
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.courseRepository = courseRepository;
+        this.auditLogService = auditLogService;
     }
 
-    public DepartmentService(DepartmentRepository departmentRepository) {
-        this(departmentRepository, null, null, null);
+    public DepartmentService(
+            DepartmentRepository departmentRepository,
+            AuditLogService auditLogService) {
+        this(departmentRepository, null, null, null, auditLogService);
     }
 
     public List<Department> getAllDepartments() {
@@ -49,16 +54,37 @@ public class DepartmentService {
     }
 
     public Department createDepartment(Department department) {
-        return departmentRepository.save(department);
+        Department saved = departmentRepository.save(department);
+
+        auditLogService.record(
+                "CREATE_DEPARTMENT",
+                "Department",
+                saved.getDepartmentId(),
+                "Created department " + saved.getCode() + " (" + saved.getName() + ")"
+        );
+
+        return saved;
     }
 
     public Department updateDepartment(Long id, Department departmentDetails) {
         Department existingDepartment = getDepartmentById(id);
 
+        String previousCode = existingDepartment.getCode();
+
         existingDepartment.setName(departmentDetails.getName());
         existingDepartment.setCode(departmentDetails.getCode());
 
-        return departmentRepository.save(existingDepartment);
+        Department saved = departmentRepository.save(existingDepartment);
+
+        auditLogService.record(
+                "UPDATE_DEPARTMENT",
+                "Department",
+                saved.getDepartmentId(),
+                "Updated department " + previousCode + " to "
+                        + saved.getCode() + " (" + saved.getName() + ")"
+        );
+
+        return saved;
     }
 
     public ResourceDependencySummary getDepartmentDependencies(Long id) {
@@ -92,6 +118,13 @@ public class DepartmentService {
             throw new ResourceConflictException(dependencies.getMessage());
         }
         departmentRepository.delete(department);
+
+        auditLogService.record(
+                "DELETE_DEPARTMENT",
+                "Department",
+                department.getDepartmentId(),
+                "Deleted department " + department.getCode() + " (" + department.getName() + ")"
+        );
     }
 
     /**

@@ -25,12 +25,15 @@ public class MarkService {
     private final AssessmentRepository assessmentRepository;
     private final AccessScope accessScope;
 
+    private final AuditLogService auditLogService;
+
     public MarkService(
             MarkRepository markRepository,
             EnrollmentRepository enrollmentRepository,
-            AssessmentRepository assessmentRepository) {
+            AssessmentRepository assessmentRepository,
+            AuditLogService auditLogService) {
 
-        this(markRepository, enrollmentRepository, assessmentRepository, null);
+        this(markRepository, enrollmentRepository, assessmentRepository, null, auditLogService);
     }
 
         @Autowired
@@ -38,12 +41,14 @@ public class MarkService {
             MarkRepository markRepository,
             EnrollmentRepository enrollmentRepository,
             AssessmentRepository assessmentRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
         this.markRepository = markRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.assessmentRepository = assessmentRepository;
         this.accessScope = accessScope;
+        this.auditLogService = auditLogService;
     }
 
     public List<Mark> getAllMarks() {
@@ -124,7 +129,18 @@ public class MarkService {
 
         mark.setMarksObtained(marksObtained);
 
-        return markRepository.save(mark);
+        Mark saved = markRepository.save(mark);
+
+        auditLogService.record(
+                "UPDATE_MARK",
+                "Mark",
+                saved.getMarkId(),
+                "Corrected the mark for enrollment "
+                        + saved.getEnrollment().getEnrollmentId() + " to "
+                        + marksObtained
+        );
+
+        return saved;
     }
 
     /**
@@ -145,6 +161,14 @@ public class MarkService {
         requireEnrollmentAccess(mark.getEnrollment().getEnrollmentId());
 
         markRepository.delete(mark);
+
+        auditLogService.record(
+                "DELETE_MARK",
+                "Mark",
+                mark.getMarkId(),
+                "Deleted the mark for enrollment "
+                        + mark.getEnrollment().getEnrollmentId()
+        );
     }
 
     /**
@@ -225,7 +249,17 @@ public class MarkService {
         mark.setAssessment(assessment);
         mark.setMarksObtained(marksObtained);
 
-        return markRepository.save(mark);
+        Mark saved = markRepository.save(mark);
+
+        auditLogService.record(
+                "CREATE_MARK",
+                "Mark",
+                saved.getMarkId(),
+                "Recorded a mark of " + marksObtained + " for enrollment "
+                        + enrollmentId + " against assessment " + assessmentId
+        );
+
+        return saved;
     }
 
     /**

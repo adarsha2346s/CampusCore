@@ -27,6 +27,7 @@ public class EnrollmentService {
     private final AccessScope accessScope;
     private final MarkRepository markRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final AuditLogService auditLogService;
 
     @Autowired
     public EnrollmentService(
@@ -35,7 +36,8 @@ public class EnrollmentService {
             CourseRepository courseRepository,
             AccessScope accessScope,
             MarkRepository markRepository,
-            AttendanceRecordRepository attendanceRecordRepository) {
+            AttendanceRecordRepository attendanceRecordRepository,
+            AuditLogService auditLogService) {
 
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
@@ -43,6 +45,7 @@ public class EnrollmentService {
         this.accessScope = accessScope;
         this.markRepository = markRepository;
         this.attendanceRecordRepository = attendanceRecordRepository;
+        this.auditLogService = auditLogService;
     }
 
     /** Convenience constructor for callers that only need the read and create paths. */
@@ -50,17 +53,19 @@ public class EnrollmentService {
             EnrollmentRepository enrollmentRepository,
             StudentRepository studentRepository,
             CourseRepository courseRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
-        this(enrollmentRepository, studentRepository, courseRepository, accessScope, null, null);
+        this(enrollmentRepository, studentRepository, courseRepository, accessScope, null, null, auditLogService);
     }
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
             StudentRepository studentRepository,
-            CourseRepository courseRepository) {
+            CourseRepository courseRepository,
+            AuditLogService auditLogService) {
 
-        this(enrollmentRepository, studentRepository, courseRepository, null, null, null);
+        this(enrollmentRepository, studentRepository, courseRepository, null, null, null, auditLogService);
     }
 
     public List<Enrollment> getAllEnrollments() {
@@ -171,7 +176,17 @@ public class EnrollmentService {
         enrollment.setAcademicYear(academicYear);
         enrollment.setStatus(status);
 
-        return enrollmentRepository.save(enrollment);
+        Enrollment saved = enrollmentRepository.save(enrollment);
+
+        auditLogService.record(
+                "UPDATE_ENROLLMENT",
+                "Enrollment",
+                saved.getEnrollmentId(),
+                "Updated enrollment to " + semester + " " + academicYear
+                        + " with status " + status.name()
+        );
+
+        return saved;
     }
 
     /**
@@ -202,6 +217,14 @@ public class EnrollmentService {
         }
 
         enrollmentRepository.delete(enrollment);
+
+        auditLogService.record(
+                "DELETE_ENROLLMENT",
+                "Enrollment",
+                enrollment.getEnrollmentId(),
+                "Deleted enrollment of student " + enrollment.getStudent().getStudentId()
+                        + " in course " + enrollment.getCourse().getCourseId()
+        );
     }
 
     public Enrollment createEnrollment(
@@ -237,6 +260,16 @@ public class EnrollmentService {
         enrollment.setEnrollmentDate(LocalDate.now());
         enrollment.setStatus(Enrollment.Status.ENROLLED);
 
-        return enrollmentRepository.save(enrollment);
+        Enrollment saved = enrollmentRepository.save(enrollment);
+
+        auditLogService.record(
+                "CREATE_ENROLLMENT",
+                "Enrollment",
+                saved.getEnrollmentId(),
+                "Enrolled student " + studentId + " in course " + courseId
+                        + " for " + semester + " " + academicYear
+        );
+
+        return saved;
     }
 }

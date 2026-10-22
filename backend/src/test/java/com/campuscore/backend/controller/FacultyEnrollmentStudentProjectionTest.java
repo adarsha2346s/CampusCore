@@ -13,6 +13,7 @@ import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
 import com.campuscore.backend.service.AccessScope;
+import com.campuscore.backend.service.AuditLogService;
 import com.campuscore.backend.service.EnrollmentService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +76,7 @@ class FacultyEnrollmentStudentProjectionTest {
                 enrollments,
                 students,
                 mock(CourseRepository.class),
-                new AccessScope(users, students, faculty, assignments, enrollments));
+                new AccessScope(users, students, faculty, assignments, enrollments), mock(AuditLogService.class));
 
         controller = new EnrollmentController(service, mock(com.campuscore.backend.service.StudentService.class));
         mockMvc = MockMvcBuilders

@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.dto.AttendanceSessionRequest;
 import com.campuscore.backend.entity.AttendanceSession;
 import com.campuscore.backend.entity.Course;
@@ -58,7 +60,7 @@ class AttendanceSessionLifecycleTest {
                 mock(CourseRepository.class),
                 mock(FacultyRepository.class),
                 accessScope,
-                records);
+                records, mock(AuditLogService.class));
     }
 
     private AttendanceSession existing() {
@@ -221,7 +223,7 @@ class AttendanceSessionLifecycleTest {
 
         AttendanceSessionService unwired = new AttendanceSessionService(
                 sessions, mock(CourseRepository.class), mock(FacultyRepository.class),
-                mock(AccessScope.class), null);
+                mock(AccessScope.class), null, mock(AuditLogService.class));
 
         ResourceConflictException failure = assertThrows(
                 ResourceConflictException.class, () -> unwired.deleteSession(SESSION_ID));
@@ -238,7 +240,7 @@ class AttendanceSessionLifecycleTest {
 
         AttendanceSessionService unwired = new AttendanceSessionService(
                 sessions, mock(CourseRepository.class), mock(FacultyRepository.class),
-                null, records);
+                null, records, mock(AuditLogService.class));
 
         assertThrows(AccessDeniedException.class,
                 () -> unwired.updateSession(

@@ -31,14 +31,16 @@ public class StudentService {
     private final DepartmentRepository departmentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final AccessScope accessScope;
+    private final AuditLogService auditLogService;
 
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
-            EnrollmentRepository enrollmentRepository) {
+            EnrollmentRepository enrollmentRepository,
+            AuditLogService auditLogService) {
 
-        this(studentRepository, userRepository, departmentRepository, enrollmentRepository, null);
+        this(studentRepository, userRepository, departmentRepository, enrollmentRepository, null, auditLogService);
     }
 
     @Autowired
@@ -47,20 +49,23 @@ public class StudentService {
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
             EnrollmentRepository enrollmentRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.accessScope = accessScope;
+        this.auditLogService = auditLogService;
     }
 
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
-            DepartmentRepository departmentRepository) {
-        this(studentRepository, userRepository, departmentRepository, null, null);
+            DepartmentRepository departmentRepository,
+            AuditLogService auditLogService) {
+        this(studentRepository, userRepository, departmentRepository, null, null, auditLogService);
     }
 
     // Get all students
@@ -222,7 +227,17 @@ public class StudentService {
         student.setAdmissionYear(request.getAdmissionYear());
         student.setStatus(Student.Status.ACTIVE);
 
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+
+        auditLogService.record(
+                "CREATE_STUDENT",
+                "Student",
+                saved.getStudentId(),
+                "Created student profile for user " + request.getUserId()
+                        + " in department " + request.getDepartmentId()
+        );
+
+        return saved;
     }
 
     // Update student
@@ -270,7 +285,17 @@ public class StudentService {
         existingStudent.setPhone(request.getPhone());
         existingStudent.setAdmissionYear(request.getAdmissionYear());
 
-        return studentRepository.save(existingStudent);
+        Student saved = studentRepository.save(existingStudent);
+
+        auditLogService.record(
+                "UPDATE_STUDENT",
+                "Student",
+                saved.getStudentId(),
+                "Updated student profile for user " + request.getUserId()
+                        + " in department " + request.getDepartmentId()
+        );
+
+        return saved;
     }
 
     // Get dependency summary
@@ -296,7 +321,16 @@ public class StudentService {
     public Student deactivateStudent(Long id) {
         Student student = getStudentById(id);
         student.setStatus(Student.Status.INACTIVE);
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+
+        auditLogService.record(
+                "DEACTIVATE_STUDENT",
+                "Student",
+                saved.getStudentId(),
+                "Deactivated student profile"
+        );
+
+        return saved;
     }
 
     // Delete student
@@ -308,6 +342,13 @@ public class StudentService {
             throw new ResourceConflictException(deps.getMessage());
         }
         studentRepository.delete(student);
+
+        auditLogService.record(
+                "DELETE_STUDENT",
+                "Student",
+                student.getStudentId(),
+                "Deleted student profile"
+        );
     }
 
     /**

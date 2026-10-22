@@ -21,12 +21,15 @@ public class AttendanceRecordService {
     private final EnrollmentRepository enrollmentRepository;
     private final AccessScope accessScope;
 
+    private final AuditLogService auditLogService;
+
     public AttendanceRecordService(
             AttendanceRecordRepository attendanceRecordRepository,
             AttendanceSessionRepository attendanceSessionRepository,
-            EnrollmentRepository enrollmentRepository) {
+            EnrollmentRepository enrollmentRepository,
+            AuditLogService auditLogService) {
 
-        this(attendanceRecordRepository, attendanceSessionRepository, enrollmentRepository, null);
+        this(attendanceRecordRepository, attendanceSessionRepository, enrollmentRepository, null, auditLogService);
     }
 
         @Autowired
@@ -34,12 +37,14 @@ public class AttendanceRecordService {
             AttendanceRecordRepository attendanceRecordRepository,
             AttendanceSessionRepository attendanceSessionRepository,
             EnrollmentRepository enrollmentRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
         this.attendanceRecordRepository = attendanceRecordRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.accessScope = accessScope;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -148,7 +153,17 @@ public class AttendanceRecordService {
         record.setEnrollment(enrollment);
         record.setStatus(status);
 
-        return attendanceRecordRepository.save(record);
+        AttendanceRecord saved = attendanceRecordRepository.save(record);
+
+        auditLogService.record(
+                "CREATE_ATTENDANCE_RECORD",
+                "AttendanceRecord",
+                saved.getAttendanceRecordId(),
+                "Marked attendance " + status.name() + " for enrollment "
+                        + enrollmentId + " in session " + attendanceSessionId
+        );
+
+        return saved;
     }
 
     /**

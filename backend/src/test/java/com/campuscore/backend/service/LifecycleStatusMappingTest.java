@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.dto.UserRequest;
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Department;
@@ -59,7 +61,7 @@ class LifecycleStatusMappingTest {
         incoming.setCredits(4);
         incoming.setCapacity(40);
 
-        Course updated = new CourseService(courses).updateCourse(11L, incoming);
+        Course updated = new CourseService(courses, mock(AuditLogService.class)).updateCourse(11L, incoming);
 
         assertSame(Course.Status.INACTIVE, updated.getStatus());
         assertEquals("Intro to Programming", updated.getCourseName());
@@ -75,7 +77,7 @@ class LifecycleStatusMappingTest {
         when(courses.findById(11L)).thenReturn(Optional.of(stored));
         when(courses.save(any(Course.class))).thenAnswer(call -> call.getArgument(0));
 
-        CourseService service = new CourseService(courses);
+        CourseService service = new CourseService(courses, mock(AuditLogService.class));
 
         assertSame(Course.Status.INACTIVE, service.deactivateCourse(11L).getStatus());
     }
@@ -144,7 +146,7 @@ class LifecycleStatusMappingTest {
         var summary = new DepartmentService(departments,
                 mock(StudentRepository.class),
                 mock(FacultyRepository.class),
-                mock(CourseRepository.class)).getDepartmentDependencies(4L);
+                mock(CourseRepository.class), mock(AuditLogService.class)).getDepartmentDependencies(4L);
 
         assertEquals(false, summary.isCanArchive());
         assertEquals(true, summary.isCanDelete());

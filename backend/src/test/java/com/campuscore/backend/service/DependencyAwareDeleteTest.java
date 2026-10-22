@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Department;
 import com.campuscore.backend.entity.Faculty;
@@ -49,7 +51,7 @@ class DependencyAwareDeleteTest {
         when(enrollments.countByCourseCourseId(11L)).thenReturn(3L);
 
         CourseService service =
-                new CourseService(courses, enrollments, assessments, sessions, assignments);
+                new CourseService(courses, enrollments, assessments, sessions, assignments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(course);
@@ -70,7 +72,7 @@ class DependencyAwareDeleteTest {
         when(assessments.countByCourseCourseId(11L)).thenReturn(1L);
 
         CourseService service =
-                new CourseService(courses, enrollments, assessments, sessions, assignments);
+                new CourseService(courses, enrollments, assessments, sessions, assignments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(course);
@@ -89,7 +91,7 @@ class DependencyAwareDeleteTest {
         when(faculty.countByDepartmentDepartmentId(4L)).thenReturn(2L);
 
         DepartmentService service =
-                new DepartmentService(departments, students, faculty, courses);
+                new DepartmentService(departments, students, faculty, courses, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteDepartment(4L));
         verify(departments, never()).delete(department);
@@ -106,7 +108,7 @@ class DependencyAwareDeleteTest {
         when(enrollments.countByStudentStudentId(7L)).thenReturn(5L);
 
         StudentService service = new StudentService(
-                students, mock(UserRepository.class), mock(DepartmentRepository.class), enrollments);
+                students, mock(UserRepository.class), mock(DepartmentRepository.class), enrollments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteStudent(7L));
         verify(students, never()).delete(student);
@@ -125,7 +127,7 @@ class DependencyAwareDeleteTest {
         FacultyService service = new FacultyService(
                 facultyRepository, mock(UserRepository.class),
                 mock(DepartmentRepository.class), sessions,
-                mock(FacultyCourseAssignmentRepository.class));
+                mock(FacultyCourseAssignmentRepository.class), mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(9L));
         verify(facultyRepository, never()).delete(faculty);
@@ -147,7 +149,7 @@ class DependencyAwareDeleteTest {
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                mock(FacultyCourseAssignmentRepository.class));
+                mock(FacultyCourseAssignmentRepository.class), mock(AuditLogService.class));
 
         service.deleteCourse(11L);
 
@@ -165,7 +167,7 @@ class DependencyAwareDeleteTest {
         StudentService service = new StudentService(students,
                 mock(UserRepository.class),
                 mock(DepartmentRepository.class),
-                mock(EnrollmentRepository.class));
+                mock(EnrollmentRepository.class), mock(AuditLogService.class));
 
         service.deleteStudent(7L);
 
@@ -181,7 +183,7 @@ class DependencyAwareDeleteTest {
         CourseRepository courses = mock(CourseRepository.class);
         when(courses.findById(404L)).thenReturn(Optional.empty());
 
-        CourseService service = new CourseService(courses);
+        CourseService service = new CourseService(courses, mock(AuditLogService.class));
 
         assertThrows(
                 com.campuscore.backend.exception.ResourceNotFoundException.class,
@@ -200,7 +202,7 @@ class DependencyAwareDeleteTest {
         course.setCourseId(11L);
         when(courses.findById(11L)).thenReturn(Optional.of(course));
 
-        CourseService service = new CourseService(courses);
+        CourseService service = new CourseService(courses, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(course);
@@ -215,7 +217,7 @@ class DependencyAwareDeleteTest {
         when(students.findById(7L)).thenReturn(Optional.of(student));
 
         StudentService service = new StudentService(
-                students, mock(UserRepository.class), mock(DepartmentRepository.class));
+                students, mock(UserRepository.class), mock(DepartmentRepository.class), mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteStudent(7L));
         verify(students, never()).delete(student);
@@ -230,7 +232,7 @@ class DependencyAwareDeleteTest {
         when(facultyRepository.findById(9L)).thenReturn(Optional.of(faculty));
 
         FacultyService service = new FacultyService(facultyRepository,
-                mock(UserRepository.class), mock(DepartmentRepository.class));
+                mock(UserRepository.class), mock(DepartmentRepository.class), mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(9L));
         verify(facultyRepository, never()).delete(faculty);
@@ -244,7 +246,7 @@ class DependencyAwareDeleteTest {
         department.setDepartmentId(4L);
         when(departments.findById(4L)).thenReturn(Optional.of(department));
 
-        DepartmentService service = new DepartmentService(departments);
+        DepartmentService service = new DepartmentService(departments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteDepartment(4L));
         verify(departments, never()).delete(department);

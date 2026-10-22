@@ -11,9 +11,13 @@ import java.util.List;
 public class GradingPolicyService {
 
     private final GradingPolicyRepository gradingPolicyRepository;
+    private final AuditLogService auditLogService;
 
-    public GradingPolicyService(GradingPolicyRepository gradingPolicyRepository) {
+    public GradingPolicyService(
+            GradingPolicyRepository gradingPolicyRepository,
+            AuditLogService auditLogService) {
         this.gradingPolicyRepository = gradingPolicyRepository;
+        this.auditLogService = auditLogService;
     }
 
     public GradingPolicy createPolicy(GradingPolicyRequest request) {
@@ -32,7 +36,17 @@ public class GradingPolicyService {
         policy.setGrade(request.getGrade());
         policy.setGradePoint(request.getGradePoint());
 
-        return gradingPolicyRepository.save(policy);
+        GradingPolicy saved = gradingPolicyRepository.save(policy);
+
+        auditLogService.record(
+                "CREATE_GRADING_POLICY",
+                "GradingPolicy",
+                saved.getGradingPolicyId(),
+                "Created grading policy " + saved.getName() + " for grade "
+                        + saved.getGrade()
+        );
+
+        return saved;
     }
 
     public List<GradingPolicy> getAllPolicies() {

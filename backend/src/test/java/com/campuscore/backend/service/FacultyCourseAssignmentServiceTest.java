@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.entity.FacultyCourseAssignment;
@@ -62,7 +64,7 @@ class FacultyCourseAssignmentServiceTest {
         when(assignments.saveAll(anyList()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        service = new FacultyCourseAssignmentService(assignments, courses, faculty, enrollments);
+        service = new FacultyCourseAssignmentService(assignments, courses, faculty, enrollments, mock(AuditLogService.class));
 
         course = new Course();
         course.setCourseId(11L);
@@ -290,7 +292,7 @@ class FacultyCourseAssignmentServiceTest {
     void removalFailsClosedWhenEnrolmentsCannotBeVerified() {
         FacultyCourseAssignment open = existing(21L);
         FacultyCourseAssignmentService reduced =
-                new FacultyCourseAssignmentService(assignments, courses, faculty, null);
+                new FacultyCourseAssignmentService(assignments, courses, faculty, null, mock(AuditLogService.class));
 
         when(assignments.findByCourseCourseIdAndFacultyFacultyIdAndEndedAtIsNull(11L, 21L))
                 .thenReturn(Optional.of(open));

@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.dto.MarkRequest;
 import com.campuscore.backend.entity.Assessment;
 import com.campuscore.backend.entity.Course;
@@ -57,7 +59,7 @@ class MarkLifecycleTest {
                 marks,
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
-                accessScope);
+                accessScope, mock(AuditLogService.class));
     }
 
     private Mark existing(String maxMarks) {
@@ -247,7 +249,7 @@ class MarkLifecycleTest {
                 marks,
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
-                null);
+                null, mock(AuditLogService.class));
 
         assertThrows(AccessDeniedException.class,
                 () -> unwired.updateMark(MARK_ID, new MarkRequest(new BigDecimal("50.00"))));

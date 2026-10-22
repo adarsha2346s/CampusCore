@@ -28,21 +28,25 @@ public class AttendanceSessionService {
     private final AccessScope accessScope;
     private final AttendanceRecordRepository attendanceRecordRepository;
 
+    private final AuditLogService auditLogService;
+
     public AttendanceSessionService(
             AttendanceSessionRepository attendanceSessionRepository,
             CourseRepository courseRepository,
-            FacultyRepository facultyRepository) {
+            FacultyRepository facultyRepository,
+            AuditLogService auditLogService) {
 
-        this(attendanceSessionRepository, courseRepository, facultyRepository, null, null);
+        this(attendanceSessionRepository, courseRepository, facultyRepository, null, null, auditLogService);
     }
 
     public AttendanceSessionService(
             AttendanceSessionRepository attendanceSessionRepository,
             CourseRepository courseRepository,
             FacultyRepository facultyRepository,
-            AccessScope accessScope) {
+            AccessScope accessScope,
+            AuditLogService auditLogService) {
 
-        this(attendanceSessionRepository, courseRepository, facultyRepository, accessScope, null);
+        this(attendanceSessionRepository, courseRepository, facultyRepository, accessScope, null, auditLogService);
     }
 
         @Autowired
@@ -51,13 +55,15 @@ public class AttendanceSessionService {
             CourseRepository courseRepository,
             FacultyRepository facultyRepository,
             AccessScope accessScope,
-            AttendanceRecordRepository attendanceRecordRepository) {
+            AttendanceRecordRepository attendanceRecordRepository,
+            AuditLogService auditLogService) {
 
         this.attendanceSessionRepository = attendanceSessionRepository;
         this.courseRepository = courseRepository;
         this.facultyRepository = facultyRepository;
         this.accessScope = accessScope;
         this.attendanceRecordRepository = attendanceRecordRepository;
+        this.auditLogService = auditLogService;
     }
 
     public List<AttendanceSession> getAllSessions() {
@@ -150,7 +156,17 @@ public class AttendanceSessionService {
         session.setSessionDate(sessionDate);
         session.setTopic(topic);
 
-        return attendanceSessionRepository.save(session);
+        AttendanceSession saved = attendanceSessionRepository.save(session);
+
+        auditLogService.record(
+                "CREATE_ATTENDANCE_SESSION",
+                "AttendanceSession",
+                saved.getAttendanceSessionId(),
+                "Created attendance session in course " + courseId
+                        + " on " + sessionDate
+        );
+
+        return saved;
     }
 
     /**
@@ -173,7 +189,16 @@ public class AttendanceSessionService {
         session.setSessionDate(request.getSessionDate());
         session.setTopic(request.getTopic());
 
-        return attendanceSessionRepository.save(session);
+        AttendanceSession saved = attendanceSessionRepository.save(session);
+
+        auditLogService.record(
+                "UPDATE_ATTENDANCE_SESSION",
+                "AttendanceSession",
+                saved.getAttendanceSessionId(),
+                "Updated attendance session to " + request.getSessionDate()
+        );
+
+        return saved;
     }
 
     /**
@@ -198,6 +223,14 @@ public class AttendanceSessionService {
         }
 
         attendanceSessionRepository.delete(session);
+
+        auditLogService.record(
+                "DELETE_ATTENDANCE_SESSION",
+                "AttendanceSession",
+                session.getAttendanceSessionId(),
+                "Deleted attendance session in course "
+                        + session.getCourse().getCourseId()
+        );
     }
 
     /**

@@ -30,6 +30,7 @@ public class FacultyService {
     private final DepartmentRepository departmentRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
     private final FacultyCourseAssignmentRepository facultyCourseAssignmentRepository;
+    private final AuditLogService auditLogService;
 
     @Autowired
     public FacultyService(
@@ -37,20 +38,23 @@ public class FacultyService {
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
             AttendanceSessionRepository attendanceSessionRepository,
-            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository) {
+            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository,
+            AuditLogService auditLogService) {
 
         this.facultyRepository = facultyRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
         this.facultyCourseAssignmentRepository = facultyCourseAssignmentRepository;
+        this.auditLogService = auditLogService;
     }
 
     public FacultyService(
             FacultyRepository facultyRepository,
             UserRepository userRepository,
-            DepartmentRepository departmentRepository) {
-        this(facultyRepository, userRepository, departmentRepository, null, null);
+            DepartmentRepository departmentRepository,
+            AuditLogService auditLogService) {
+        this(facultyRepository, userRepository, departmentRepository, null, null, auditLogService);
     }
 
     public List<Faculty> getAllFaculty() {
@@ -118,7 +122,16 @@ public class FacultyService {
         faculty.setPhone(phone);
         faculty.setStatus(Faculty.Status.ACTIVE);
 
-        return facultyRepository.save(faculty);
+        Faculty saved = facultyRepository.save(faculty);
+
+        auditLogService.record(
+                "CREATE_FACULTY",
+                "Faculty",
+                saved.getFacultyId(),
+                "Created faculty profile " + saved.getEmployeeNumber()
+        );
+
+        return saved;
     }
 
     public ResourceDependencySummary getFacultyDependencies(Long id) {
@@ -145,7 +158,16 @@ public class FacultyService {
     public Faculty deactivateFaculty(Long id) {
         Faculty faculty = getFacultyById(id);
         faculty.setStatus(Faculty.Status.INACTIVE);
-        return facultyRepository.save(faculty);
+        Faculty saved = facultyRepository.save(faculty);
+
+        auditLogService.record(
+                "DEACTIVATE_FACULTY",
+                "Faculty",
+                saved.getFacultyId(),
+                "Deactivated faculty profile " + saved.getEmployeeNumber()
+        );
+
+        return saved;
     }
 
     public void deleteFaculty(Long id) {
@@ -156,6 +178,13 @@ public class FacultyService {
             throw new ResourceConflictException(deps.getMessage());
         }
         facultyRepository.delete(faculty);
+
+        auditLogService.record(
+                "DELETE_FACULTY",
+                "Faculty",
+                faculty.getFacultyId(),
+                "Deleted faculty profile " + faculty.getEmployeeNumber()
+        );
     }
 
     /**

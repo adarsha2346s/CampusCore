@@ -12,6 +12,7 @@ import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
 import com.campuscore.backend.service.AccessScope;
+import com.campuscore.backend.service.AuditLogService;
 import com.campuscore.backend.service.AttendanceSessionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,7 +79,7 @@ class FacultyAttendanceSessionScopeTest {
                 mock(CourseRepository.class),
                 faculty,
                 accessScope,
-                null);
+                null, mock(AuditLogService.class));
 
         AttendanceSessionController controller = new AttendanceSessionController(service);
 

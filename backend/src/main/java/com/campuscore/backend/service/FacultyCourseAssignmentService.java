@@ -38,24 +38,28 @@ public class FacultyCourseAssignmentService {
     private final CourseRepository courseRepository;
     private final FacultyRepository facultyRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AuditLogService auditLogService;
 
     @Autowired
     public FacultyCourseAssignmentService(
             FacultyCourseAssignmentRepository assignmentRepository,
             CourseRepository courseRepository,
             FacultyRepository facultyRepository,
-            EnrollmentRepository enrollmentRepository) {
+            EnrollmentRepository enrollmentRepository,
+            AuditLogService auditLogService) {
 
         this.assignmentRepository = assignmentRepository;
         this.courseRepository = courseRepository;
         this.facultyRepository = facultyRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.auditLogService = auditLogService;
     }
 
     public FacultyCourseAssignmentService(
-            FacultyCourseAssignmentRepository assignmentRepository) {
+            FacultyCourseAssignmentRepository assignmentRepository,
+            AuditLogService auditLogService) {
 
-        this(assignmentRepository, null, null, null);
+        this(assignmentRepository, null, null, null, auditLogService);
     }
 
     // ------------------------------------------------------------------
@@ -118,7 +122,18 @@ public class FacultyCourseAssignmentService {
         assignment.setFaculty(faculty);
         assignment.setAssignedAt(LocalDateTime.now());
 
-        return toResponse(assignmentRepository.save(assignment));
+        FacultyAssignmentResponse saved =
+                toResponse(assignmentRepository.save(assignment));
+
+        auditLogService.record(
+                "ASSIGN_FACULTY",
+                "FacultyCourseAssignment",
+                saved.getAssignmentId(),
+                "Assigned faculty " + faculty.getEmployeeNumber() + " to course "
+                        + course.getCourseCode()
+        );
+
+        return saved;
     }
 
     /**
@@ -158,7 +173,23 @@ public class FacultyCourseAssignmentService {
         replacement.setFaculty(faculty);
         replacement.setAssignedAt(now);
 
-        return toResponse(assignmentRepository.save(replacement));
+        FacultyAssignmentResponse saved =
+                toResponse(assignmentRepository.save(replacement));
+
+        // One handover is one event: the assignments it closed and the one it
+        // opened are the same administrative action.
+        auditLogService.record(
+                "REASSIGN_FACULTY",
+                "FacultyCourseAssignment",
+                saved.getAssignmentId(),
+                "Reassigned course " + course.getCourseCode() + " to faculty "
+                        + faculty.getEmployeeNumber()
+                        + (current.isEmpty()
+                                ? ""
+                                : ", closing " + current.size() + " previous assignment(s)")
+        );
+
+        return saved;
     }
 
     /**
@@ -188,6 +219,14 @@ public class FacultyCourseAssignmentService {
 
         assignment.setEndedAt(LocalDateTime.now());
         assignmentRepository.save(assignment);
+
+        auditLogService.record(
+                "END_FACULTY_ASSIGNMENT",
+                "FacultyCourseAssignment",
+                assignment.getAssignmentId(),
+                "Ended the assignment of faculty " + assignment.getFaculty().getEmployeeNumber()
+                        + " to course " + assignment.getCourse().getCourseCode()
+        );
     }
 
     // ------------------------------------------------------------------

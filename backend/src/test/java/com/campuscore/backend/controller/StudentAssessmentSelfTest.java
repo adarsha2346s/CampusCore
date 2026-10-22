@@ -10,6 +10,7 @@ import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
 import com.campuscore.backend.service.AccessScope;
+import com.campuscore.backend.service.AuditLogService;
 import com.campuscore.backend.service.AssessmentService;
 import com.campuscore.backend.service.StudentService;
 import org.junit.jupiter.api.AfterEach;
@@ -77,7 +78,7 @@ class StudentAssessmentSelfTest {
                 mock(EnrollmentRepository.class));
 
         assessmentService = new AssessmentService(
-                assessments, mock(CourseRepository.class), accessScope);
+                assessments, mock(CourseRepository.class), accessScope, mock(AuditLogService.class));
         studentService = mock(StudentService.class);
         controller = new AssessmentController(assessmentService, studentService);
 
@@ -241,7 +242,7 @@ class StudentAssessmentSelfTest {
     @Test
     void theServiceFailsClosedWhenScopeIsUnavailable() {
         AssessmentService unscoped = new AssessmentService(
-                assessments, mock(CourseRepository.class));
+                assessments, mock(CourseRepository.class), mock(AuditLogService.class));
 
         assertThrows(AccessDeniedException.class,
                 () -> unscoped.getAssessmentsForStudent(STUDENT_ID));

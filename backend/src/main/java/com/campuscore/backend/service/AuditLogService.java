@@ -4,6 +4,8 @@ import com.campuscore.backend.entity.AuditLog;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.AuditLogRepository;
 import com.campuscore.backend.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +54,59 @@ public class AuditLogService {
         auditLog.setDescription(description);
 
         return auditLogRepository.save(auditLog);
+    }
+
+    /**
+     * Records an administrative action performed by the signed-in account.
+     *
+     * <p>The actor is read from the authenticated security context, never from
+     * the request, so a caller cannot record an action as somebody else and a
+     * forged actor cannot be smuggled in through a request body.
+     *
+     * <p>This is the single entry point the services use. Logging an action in
+     * more than one place would produce a second row for the same event, and
+     * logging before the write succeeded would leave a record of something
+     * that never happened.
+     */
+    public AuditLog record(
+            String action,
+            String entityName,
+            Long entityId,
+            String description) {
+
+        return createLog(
+                currentActorId(),
+                action,
+                entityName,
+                entityId,
+                description);
+    }
+
+    /**
+     * The account that is performing the current action.
+     *
+     * <p>Null when there is no authenticated account, which is the case for
+     * work that is not driven by a signed-in user. The audit row is still
+     * written; the schema allows a row without an actor.
+     */
+    private Long currentActorId() {
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+
+            return null;
+        }
+
+        return userRepository
+                .findByUsername(authentication.getName())
+                .map(User::getUserId)
+                .orElse(null);
     }
 
     // Get all audit logs

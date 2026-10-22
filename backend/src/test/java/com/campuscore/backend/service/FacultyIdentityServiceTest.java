@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.entity.User;
 import com.campuscore.backend.repository.DepartmentRepository;
@@ -20,7 +22,7 @@ class FacultyIdentityServiceTest {
     void resolvesProfileUsingAuthenticatedUsernameAndUserForeignKey() {
         FacultyRepository facultyRepository = mock(FacultyRepository.class);
         UserRepository users = mock(UserRepository.class);
-        FacultyService service = new FacultyService(facultyRepository, users, mock(DepartmentRepository.class));
+        FacultyService service = new FacultyService(facultyRepository, users, mock(DepartmentRepository.class), mock(AuditLogService.class));
         User authenticatedUser = new User();
         authenticatedUser.setUserId(82L);
         Faculty linkedFaculty = new Faculty();

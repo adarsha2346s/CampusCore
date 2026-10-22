@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.AttendanceRecordRepository;
@@ -75,19 +77,19 @@ class GlobalListingAdminOnlyTest {
     }
 
     private AssessmentService assessmentService() {
-        return new AssessmentService(assessments, courses, scope());
+        return new AssessmentService(assessments, courses, scope(), mock(AuditLogService.class));
     }
 
     private MarkService markService() {
-        return new MarkService(marks, enrollments, assessments, scope());
+        return new MarkService(marks, enrollments, assessments, scope(), mock(AuditLogService.class));
     }
 
     private AttendanceSessionService sessionService() {
-        return new AttendanceSessionService(sessions, courses, mock(FacultyRepository.class), scope());
+        return new AttendanceSessionService(sessions, courses, mock(FacultyRepository.class), scope(), mock(AuditLogService.class));
     }
 
     private AttendanceRecordService recordService() {
-        return new AttendanceRecordService(records, sessions, enrollments, scope());
+        return new AttendanceRecordService(records, sessions, enrollments, scope(), mock(AuditLogService.class));
     }
 
     // ------------------------------------------------------------------
@@ -181,9 +183,9 @@ class GlobalListingAdminOnlyTest {
         SecurityContextHolder.clearContext();
 
         assertThrows(AccessDeniedException.class,
-                () -> new AssessmentService(assessments, courses).getAllAssessments());
+                () -> new AssessmentService(assessments, courses, mock(AuditLogService.class)).getAllAssessments());
         assertThrows(AccessDeniedException.class,
-                () -> new MarkService(marks, enrollments, assessments).getAllMarks());
+                () -> new MarkService(marks, enrollments, assessments, mock(AuditLogService.class)).getAllMarks());
     }
 
     // ------------------------------------------------------------------
@@ -209,7 +211,7 @@ class GlobalListingAdminOnlyTest {
 
         EnrollmentService service = new EnrollmentService(
                 enrollmentRepository, students, courses,
-                new AccessScope(users, students, faculty, assignments, enrollmentRepository));
+                new AccessScope(users, students, faculty, assignments, enrollmentRepository), mock(AuditLogService.class));
 
         assertTrue(service.getEnrollmentsByCourse(11L).isEmpty());
     }
@@ -232,7 +234,7 @@ class GlobalListingAdminOnlyTest {
 
         EnrollmentService service = new EnrollmentService(
                 enrollmentRepository, students, courses,
-                new AccessScope(users, students, faculty, assignments, enrollmentRepository));
+                new AccessScope(users, students, faculty, assignments, enrollmentRepository), mock(AuditLogService.class));
 
         assertThrows(AccessDeniedException.class, () -> service.getEnrollmentsByCourse(99L));
         verify(enrollmentRepository, never()).findByCourseCourseId(anyLong());
@@ -253,7 +255,7 @@ class GlobalListingAdminOnlyTest {
         EnrollmentService service = new EnrollmentService(
                 enrollmentRepository, students, courses,
                 new AccessScope(users, students, mock(FacultyRepository.class),
-                        mock(FacultyCourseAssignmentRepository.class), enrollmentRepository));
+                        mock(FacultyCourseAssignmentRepository.class), enrollmentRepository), mock(AuditLogService.class));
 
         assertThrows(AccessDeniedException.class, () -> service.getEnrollmentsByCourse(11L));
     }

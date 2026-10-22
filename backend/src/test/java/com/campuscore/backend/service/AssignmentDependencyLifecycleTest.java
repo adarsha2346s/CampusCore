@@ -1,5 +1,7 @@
 package com.campuscore.backend.service;
 
+import com.campuscore.backend.service.AuditLogService;
+
 import com.campuscore.backend.entity.Course;
 import com.campuscore.backend.entity.Faculty;
 import com.campuscore.backend.exception.ResourceConflictException;
@@ -61,7 +63,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(target);
@@ -79,7 +81,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         var summary = service.getCourseDependencies(11L);
 
@@ -99,7 +101,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         service.deleteCourse(11L);
 
@@ -115,7 +117,7 @@ class AssignmentDependencyLifecycleTest {
 
         // Reduced constructor: the assignment repository is absent and must not be
         // mistaken for "this course has no assignments".
-        CourseService service = new CourseService(courses);
+        CourseService service = new CourseService(courses, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteCourse(11L));
         verify(courses, never()).delete(target);
@@ -137,7 +139,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(EnrollmentRepository.class),
                 mock(AssessmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         assertEquals(Course.Status.INACTIVE, service.deactivateCourse(11L).getStatus());
     }
@@ -159,7 +161,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(UserRepository.class),
                 mock(com.campuscore.backend.repository.DepartmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(21L));
         verify(facultyRepository, never()).delete(target);
@@ -177,7 +179,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(UserRepository.class),
                 mock(com.campuscore.backend.repository.DepartmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         var summary = service.getFacultyDependencies(21L);
 
@@ -198,7 +200,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(UserRepository.class),
                 mock(com.campuscore.backend.repository.DepartmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         service.deleteFaculty(21L);
 
@@ -214,7 +216,7 @@ class AssignmentDependencyLifecycleTest {
 
         FacultyService service = new FacultyService(facultyRepository,
                 mock(UserRepository.class),
-                mock(com.campuscore.backend.repository.DepartmentRepository.class));
+                mock(com.campuscore.backend.repository.DepartmentRepository.class), mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(21L));
         verify(facultyRepository, never()).delete(target);
@@ -237,7 +239,7 @@ class AssignmentDependencyLifecycleTest {
                 mock(UserRepository.class),
                 mock(com.campuscore.backend.repository.DepartmentRepository.class),
                 mock(AttendanceSessionRepository.class),
-                assignments);
+                assignments, mock(AuditLogService.class));
 
         assertThrows(ResourceConflictException.class, () -> service.deleteFaculty(21L));
     }

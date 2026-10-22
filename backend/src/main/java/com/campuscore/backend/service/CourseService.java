@@ -26,6 +26,7 @@ public class CourseService {
     private final AssessmentRepository assessmentRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
     private final FacultyCourseAssignmentRepository facultyCourseAssignmentRepository;
+    private final AuditLogService auditLogService;
 
     @Autowired
     public CourseService(
@@ -33,16 +34,20 @@ public class CourseService {
             EnrollmentRepository enrollmentRepository,
             AssessmentRepository assessmentRepository,
             AttendanceSessionRepository attendanceSessionRepository,
-            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository) {
+            FacultyCourseAssignmentRepository facultyCourseAssignmentRepository,
+            AuditLogService auditLogService) {
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.assessmentRepository = assessmentRepository;
         this.attendanceSessionRepository = attendanceSessionRepository;
         this.facultyCourseAssignmentRepository = facultyCourseAssignmentRepository;
+        this.auditLogService = auditLogService;
     }
 
-    public CourseService(CourseRepository courseRepository) {
-        this(courseRepository, null, null, null, null);
+    public CourseService(
+            CourseRepository courseRepository,
+            AuditLogService auditLogService) {
+        this(courseRepository, null, null, null, null, auditLogService);
     }
 
     // Get all courses
@@ -62,7 +67,16 @@ public class CourseService {
 
     // Create course
     public Course createCourse(Course course) {
-        return courseRepository.save(course);
+        Course saved = courseRepository.save(course);
+
+        auditLogService.record(
+                "CREATE_COURSE",
+                "Course",
+                saved.getCourseId(),
+                "Created course " + saved.getCourseCode() + " (" + saved.getCourseName() + ")"
+        );
+
+        return saved;
     }
 
     // Update course
@@ -80,7 +94,16 @@ public class CourseService {
         // course back to ACTIVE and silently resurrect a deactivated one. Status
         // changes go through deactivateCourse only.
 
-        return courseRepository.save(existingCourse);
+        Course saved = courseRepository.save(existingCourse);
+
+        auditLogService.record(
+                "UPDATE_COURSE",
+                "Course",
+                saved.getCourseId(),
+                "Updated course " + saved.getCourseCode() + " (" + saved.getCourseName() + ")"
+        );
+
+        return saved;
     }
 
     // Get dependency summary
@@ -115,7 +138,16 @@ public class CourseService {
     public Course deactivateCourse(Long id) {
         Course course = getCourseById(id);
         course.setStatus(Course.Status.INACTIVE);
-        return courseRepository.save(course);
+        Course saved = courseRepository.save(course);
+
+        auditLogService.record(
+                "DEACTIVATE_COURSE",
+                "Course",
+                saved.getCourseId(),
+                "Deactivated course " + saved.getCourseCode()
+        );
+
+        return saved;
     }
 
     // Delete course
@@ -127,6 +159,13 @@ public class CourseService {
             throw new ResourceConflictException(dependencies.getMessage());
         }
         courseRepository.delete(course);
+
+        auditLogService.record(
+                "DELETE_COURSE",
+                "Course",
+                course.getCourseId(),
+                "Deleted course " + course.getCourseCode()
+        );
     }
 
     /**
