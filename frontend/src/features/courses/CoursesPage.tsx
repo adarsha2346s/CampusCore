@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Archive, BookOpen, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '../../components/data-display/EmptyState'
 import { ErrorState } from '../../components/data-display/ErrorState'
@@ -17,6 +17,7 @@ import { StatusBadge } from '../admin-shared/StatusBadge'
 import { notifyError } from '../admin-shared/feedback'
 import { departmentKeys, getDepartments } from '../departments/departments.api'
 import { CourseFormDialog } from './CourseFormDialog'
+import { CourseAssignmentsDialog } from './CourseAssignmentsDialog'
 import { createCourse, courseKeys, deactivateCourse, deleteCourse, getCoursesPage, updateCourse } from './courses.api'
 import type { CourseRequest, CourseResponse } from '../../types/api'
 
@@ -31,6 +32,7 @@ export function CoursesPage() {
   const [departmentId, setDepartmentId] = useState('ALL')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<CourseResponse | null>(null)
+  const [assignmentsFor, setAssignmentsFor] = useState<CourseResponse | null>(null)
   const refresh = () => client.invalidateQueries({ queryKey: ['admin'] })
   const create = useMutation({ mutationFn: createCourse, onSuccess: async () => { await refresh(); setFormOpen(false); toast.success('Course created') } })
   const update = useMutation({ mutationFn: ({ id, request }: { id: number; request: CourseRequest }) => updateCourse(id, request), onSuccess: async () => { await refresh(); setFormOpen(false); setEditing(null); toast.success('Course updated') } })
@@ -67,6 +69,7 @@ export function CoursesPage() {
         {courses.isPending ? <TableSkeleton rows={8} columns={5} label="Loading courses" /> : courses.isError ? <ErrorState error={courses.error} onRetry={() => void courses.refetch()} /> : filtered.length === 0 ? <EmptyState title={courses.data.totalElements === 0 ? 'No courses yet' : 'No courses on this page match these filters'} description={courses.data.totalElements === 0 ? 'Create a department first, then add its courses to the catalog.' : 'Try another search, status, department or page.'} /> : (
           <ResourceTable caption="Course catalog" columns={columns} rows={filtered} getRowKey={(course) => course.courseId} actions={(course) => (
             <div className="row-actions">
+              <Button size="sm" variant="ghost" aria-label={`Teaching staff for ${course.courseCode}`} title="Teaching staff" onClick={() => setAssignmentsFor(course)}><Users size={16} /></Button>
               <Button size="sm" variant="ghost" aria-label={`Edit ${course.courseCode}`} title="Edit course" onClick={() => { setEditing(course); setFormOpen(true) }}><Pencil size={16} /></Button>
               <ConfirmDialog title="Delete course?" description={`Delete ${course.courseCode} — ${course.courseName}? The backend may reject deletion while related enrollments or assessments exist.`} confirmLabel="Delete course" onConfirm={async () => { try { await remove.mutateAsync(course.courseId) } catch (error) { notifyError(error, 'The course could not be deleted.'); throw error } }} trigger={<Button size="sm" variant="ghost" aria-label={`Delete ${course.courseCode}`} title="Delete course"><Trash2 size={16} /></Button>} />
               {course.status === 'ACTIVE' && (
@@ -87,6 +90,7 @@ export function CoursesPage() {
         {!courses.isPending && !courses.isError && courses.data && <PaginationControls page={courses.data.page} size={courses.data.size} totalElements={courses.data.totalElements} totalPages={courses.data.totalPages} onPageChange={setPage} />}
       </Card>
       <CourseFormDialog open={formOpen} onOpenChange={setFormOpen} course={editing} departments={departments.data ?? []} onSubmit={save} />
+      <CourseAssignmentsDialog open={assignmentsFor !== null} onOpenChange={(open) => { if (!open) setAssignmentsFor(null) }} course={assignmentsFor} />
     </div>
   )
 }

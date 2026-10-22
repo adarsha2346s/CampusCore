@@ -70,6 +70,41 @@ FROM (
 ) AS seed
 JOIN department d ON d.code = seed.department_code;
 
+-- Faculty-course assignments.
+--
+-- The teaching relationship itself: an assignment is what gives a faculty member
+-- access to a course's assessments, marks, attendance and enrolled students.
+-- Without one the faculty workspace is empty, because every teaching page scopes
+-- itself to the assignments the server reports.
+--
+-- The mapping is the same one the attendance sessions below are recorded
+-- against, so the seeded teaching data is internally consistent: the faculty
+-- member who holds a session is the one assigned to teach that course.
+--
+-- The NOT EXISTS guard keeps the statement safe to run more than once. The
+-- assignment table deliberately has no unique constraint, because a faculty
+-- member may return to a course later, so without the guard a second run would
+-- silently add a second copy of every row rather than failing the way the
+-- other inserts in this file do.
+INSERT INTO faculty_course_assignment (course_id, faculty_id, assigned_at)
+SELECT c.course_id, f.faculty_id, TIMESTAMP '2026-08-10 09:00:00'
+FROM course c
+JOIN department d ON d.department_id = c.department_id
+JOIN users faculty_user
+  ON faculty_user.username = CASE
+      WHEN d.code = 'MATH' THEN 'demo_faculty_02'
+      ELSE 'demo_faculty_01'
+  END
+JOIN faculty f ON f.user_id = faculty_user.user_id
+WHERE c.course_code IN ('CSE101', 'CSE201', 'CSE202', 'CSE203', 'ECE101', 'MTH101')
+  AND NOT EXISTS (
+      SELECT 1
+      FROM faculty_course_assignment existing
+      WHERE existing.course_id = c.course_id
+        AND existing.faculty_id = f.faculty_id
+        AND existing.ended_at IS NULL
+  );
+
 INSERT INTO enrollment (
     student_id, course_id, semester, academic_year, enrollment_date, status
 )

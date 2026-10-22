@@ -27,10 +27,16 @@ Do not capture real personal records, credentials, or tokens.
 
 ## Features and roles
 
-- **ADMIN:** user and student directory management, faculty creation, departments and courses, enrollments, assessments, marks, attendance, grading policies, GPA lookup, and read-only audit logs. Available operations follow the existing API methods.
-- **FACULTY:** authenticated faculty profile, student directory, course catalog, and department catalog. The current data model does not define faculty-course assignments, so assigned teaching operations are not presented.
+- **ADMIN:** user and student directory management, faculty creation, departments and courses, faculty-course assignment management, enrollments, assessments, marks, attendance, grading policies, GPA lookup, and read-only audit logs. Available operations follow the existing API methods.
+- **FACULTY:** authenticated faculty profile, own assigned teaching courses, the students of those courses, course-scoped assessments, marks, attendance and enrollments, course catalog, and department catalog. Teaching data is scoped to the assignments the server reports for the signed-in account.
 - **STUDENT:** authenticated self profile, personal dashboard, own enrollment list, own enrollment GPA lookup, and the course catalog.
 - Responsive role workspaces with form validation, search/filtering on loaded lists, detail dialogs, and loading, empty, error, and mutation feedback states.
+
+### Faculty-course assignments
+
+An assignment is what gives a faculty member access to a course's assessments, marks, attendance and enrolled students, so an administrator manages it from the course catalog: the **Teaching staff** action on each course opens the assigned faculty, the assignment history, and the controls to assign, hand over or end an assignment.
+
+The relationship is append-only. Ending an assignment closes it and a handover closes the previous row rather than deleting it, so the record of who taught a course before is never lost, and the enrolled students, assessments, marks and attendance records are left untouched. The server refuses to remove the last assignment of a course that still has enrolled students and asks for a handover instead, because that would leave those students without an assigned faculty member.
 
 ## Legal pages
 
@@ -110,6 +116,8 @@ mysql campuscore < backend/database/demo-data.sql
 
 Run these commands only on a fresh, isolated MySQL instance because the schema selects the database named `campuscore`. Do not run the seed against an existing or production database. It creates synthetic application accounts with BCrypt password hashes; no demo password is published in this README. Keep demo and production databases separate.
 
+The seed also creates the faculty-course assignments that make the faculty workspace show real academic data: one faculty member teaches the five computer science and electronics courses and another teaches the mathematics course, matching the faculty the seeded attendance sessions are recorded against. The assignment rows are guarded so re-running the seed cannot silently duplicate them.
+
 ## Local setup
 
 ### Docker Compose
@@ -175,7 +183,7 @@ Production verification has been completed against the deployed stack. The Verce
 
 ## Known limitations
 
-- No faculty-course assignment relationship or faculty teaching operations.
+- The Faculty Student 360 drawer reads administrator-only endpoints, so it renders an error for a faculty member. The faculty-facing data it needs is not yet served by a faculty-scoped endpoint.
 - No demo account credentials are published in this README; access to the hosted demo requires credentials from the project operator.
 - The frontend project does not include an automated browser/E2E test suite.
 - JWT sessions are memory-only and require login after reload; no refresh-token endpoint exists.
@@ -183,5 +191,5 @@ Production verification has been completed against the deployed stack. The Verce
 ## Roadmap
 
 1. Extend server-side filtering to collection workflows where campus usage requires it.
-2. Model faculty-course assignments and add ownership-scoped teaching workflows if the institution's requirements support them.
-3. Add automated API/security and browser-level regression tests.
+2. Add a browser-level regression suite on top of the API and security tests that already run in CI.
+3. Extend audit logging beyond user accounts to the other administrative mutations, and make the administrative write paths transactional.
