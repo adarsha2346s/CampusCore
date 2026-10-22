@@ -67,8 +67,37 @@ public class StudentService {
         return studentRepository.findAll();
     }
 
+    /**
+     * Students the acting caller may see, one page at a time.
+     *
+     * <p>Administrators see the whole directory. A faculty member only ever
+     * sees the students enrolled in one of their currently assigned courses.
+     *
+     * <p>The scope is applied by the database query, not by filtering the
+     * institution's students afterwards, and the reported total is counted over
+     * the same permitted set. A page therefore cannot be used to discover how
+     * many students exist elsewhere in the institution.
+     *
+     * <p>A faculty member without a current assignment gets an empty page,
+     * which is the same answer the unpaged listing gives them.
+     */
     public Page<Student> getStudentsPage(Pageable pageable) {
-        return studentRepository.findAll(pageable);
+        if (accessScope == null) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Access scope is unavailable");
+        }
+
+        if (accessScope.isAdmin()) {
+            return studentRepository.findAll(pageable);
+        }
+
+        List<Long> courseIds = accessScope.assignedCourseIds();
+
+        if (courseIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        return studentRepository.findDistinctByCourseCourseIdIn(courseIds, pageable);
     }
 
     /**

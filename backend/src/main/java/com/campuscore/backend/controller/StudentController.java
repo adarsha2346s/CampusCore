@@ -79,6 +79,9 @@ public class StudentController {
 
         Pageable pageable = PageParameters.optional(page, size, "studentId");
         if (pageable != null) {
+            // The paged listing is scoped exactly like the unpaged one below:
+            // administrators see the whole directory and a faculty member sees
+            // only the students they teach.
             return ResponseEntity.ok(PageResponse.from(
                     studentService.getStudentsPage(pageable), this::toResponse));
         }
