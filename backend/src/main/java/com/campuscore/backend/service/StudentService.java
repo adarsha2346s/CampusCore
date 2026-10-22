@@ -13,6 +13,7 @@ import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -180,6 +181,7 @@ public class StudentService {
     }
 
     // Create student
+    @Transactional
     public Student createStudent(StudentRequest request) {
 
         if (studentRepository.existsByEnrollmentNumber(
@@ -241,6 +243,7 @@ public class StudentService {
     }
 
     // Update student
+    @Transactional
     public Student updateStudent(
             Long id,
             StudentRequest request) {
@@ -318,6 +321,7 @@ public class StudentService {
     }
 
     // Deactivate student
+    @Transactional
     public Student deactivateStudent(Long id) {
         Student student = getStudentById(id);
         student.setStatus(Student.Status.INACTIVE);
@@ -334,6 +338,7 @@ public class StudentService {
     }
 
     // Delete student
+    @Transactional
     public void deleteStudent(Long id) {
         Student student = getStudentById(id);
         requireVerifiableDependencies();

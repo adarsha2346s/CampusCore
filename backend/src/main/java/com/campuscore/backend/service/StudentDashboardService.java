@@ -7,6 +7,7 @@ import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.repository.AttendanceRecordRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.StudentRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,6 +34,7 @@ public class StudentDashboardService {
         this.gpaCalculationService = gpaCalculationService;
     }
 
+    @Transactional(readOnly = true)
     public StudentDashboardResponse getStudentDashboard(Long studentId) {
 
         Student student = studentRepository.findById(studentId)

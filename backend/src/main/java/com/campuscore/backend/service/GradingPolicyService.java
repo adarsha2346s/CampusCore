@@ -3,6 +3,7 @@ package com.campuscore.backend.service;
 import com.campuscore.backend.dto.GradingPolicyRequest;
 import com.campuscore.backend.entity.GradingPolicy;
 import com.campuscore.backend.repository.GradingPolicyRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class GradingPolicyService {
         this.auditLogService = auditLogService;
     }
 
+    @Transactional
     public GradingPolicy createPolicy(GradingPolicyRequest request) {
 
         if (request.getMinPercentage().compareTo(request.getMaxPercentage()) > 0) {

@@ -11,6 +11,7 @@ import com.campuscore.backend.repository.AttendanceSessionRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -123,6 +124,7 @@ public class AttendanceSessionService {
         }
     }
 
+    @Transactional
     public AttendanceSession createSession(
             Long courseId,
             Long facultyId,
@@ -179,6 +181,7 @@ public class AttendanceSessionService {
      * <p>The date stays editable even once attendance exists: correcting a
      * mistyped date is the common case and does not change what was recorded.
      */
+    @Transactional
     public AttendanceSession updateSession(Long id, AttendanceSessionRequest request) {
         AttendanceSession session = attendanceSessionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -210,6 +213,7 @@ public class AttendanceSessionService {
      * message naming the recorded attendance. Sessions have no status column, so
      * there is no archive state to fall back on.
      */
+    @Transactional
     public void deleteSession(Long id) {
         AttendanceSession session = attendanceSessionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

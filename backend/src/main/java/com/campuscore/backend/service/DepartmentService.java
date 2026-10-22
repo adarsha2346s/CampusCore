@@ -9,6 +9,7 @@ import com.campuscore.backend.repository.DepartmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -53,6 +54,7 @@ public class DepartmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
     }
 
+    @Transactional
     public Department createDepartment(Department department) {
         Department saved = departmentRepository.save(department);
 
@@ -66,6 +68,7 @@ public class DepartmentService {
         return saved;
     }
 
+    @Transactional
     public Department updateDepartment(Long id, Department departmentDetails) {
         Department existingDepartment = getDepartmentById(id);
 
@@ -110,6 +113,7 @@ public class DepartmentService {
         return new ResourceDependencySummary("DEPARTMENT", id, canDelete, canArchive, counts, message);
     }
 
+    @Transactional
     public void deleteDepartment(Long id) {
         Department department = getDepartmentById(id);
         requireVerifiableDependencies();

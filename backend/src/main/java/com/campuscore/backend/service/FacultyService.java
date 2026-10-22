@@ -12,6 +12,7 @@ import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import com.campuscore.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -84,6 +85,7 @@ public class FacultyService {
                 ));
     }
 
+    @Transactional
     public Faculty createFaculty(
             Long userId,
             Long departmentId,
@@ -155,6 +157,7 @@ public class FacultyService {
         return new ResourceDependencySummary("FACULTY", id, canDelete, canArchive, counts, message);
     }
 
+    @Transactional
     public Faculty deactivateFaculty(Long id) {
         Faculty faculty = getFacultyById(id);
         faculty.setStatus(Faculty.Status.INACTIVE);
@@ -170,6 +173,7 @@ public class FacultyService {
         return saved;
     }
 
+    @Transactional
     public void deleteFaculty(Long id) {
         Faculty faculty = getFacultyById(id);
         requireVerifiableDependencies();

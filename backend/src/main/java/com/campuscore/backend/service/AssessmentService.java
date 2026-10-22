@@ -9,6 +9,7 @@ import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.MarkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -106,6 +107,7 @@ public class AssessmentService {
         return assessmentRepository.findByCourseCourseId(courseId, pageable);
     }
 
+    @Transactional
     public Assessment createAssessment(
             Long courseId,
             String name,
@@ -151,6 +153,7 @@ public class AssessmentService {
      * <p>The course is intentionally not editable: it is the owning offering, and
      * moving an assessment between courses would strand its marks.
      */
+    @Transactional
     public Assessment updateAssessment(Long id, AssessmentRequest request) {
         Assessment assessment = assessmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -191,6 +194,7 @@ public class AssessmentService {
      * clearer than surfacing that as a server error. Assessments carry no status
      * column, so there is no archive state to fall back on.
      */
+    @Transactional
     public void deleteAssessment(Long id) {
         Assessment assessment = assessmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

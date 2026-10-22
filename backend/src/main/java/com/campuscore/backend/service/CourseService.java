@@ -10,6 +10,7 @@ import com.campuscore.backend.repository.CourseRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -66,6 +67,7 @@ public class CourseService {
     }
 
     // Create course
+    @Transactional
     public Course createCourse(Course course) {
         Course saved = courseRepository.save(course);
 
@@ -80,6 +82,7 @@ public class CourseService {
     }
 
     // Update course
+    @Transactional
     public Course updateCourse(Long id, Course courseDetails) {
         Course existingCourse = getCourseById(id);
 
@@ -135,6 +138,7 @@ public class CourseService {
     }
 
     // Safe deactivation
+    @Transactional
     public Course deactivateCourse(Long id) {
         Course course = getCourseById(id);
         course.setStatus(Course.Status.INACTIVE);
@@ -151,6 +155,7 @@ public class CourseService {
     }
 
     // Delete course
+    @Transactional
     public void deleteCourse(Long id) {
         Course course = getCourseById(id);
         requireVerifiableDependencies();

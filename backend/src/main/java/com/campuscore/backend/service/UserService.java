@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
@@ -57,6 +58,7 @@ public class UserService {
     // =========================
     // CREATE USER
     // =========================
+    @Transactional
     public User createUser(UserRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -104,6 +106,7 @@ public class UserService {
     // =========================
     // UPDATE USER
     // =========================
+    @Transactional
     public User updateUser(
             Long id,
             UserRequest request) {
@@ -161,6 +164,7 @@ public class UserService {
     // =========================
     // DEACTIVATE USER
     // =========================
+    @Transactional
     public void deactivateUser(Long id) {
 
         User actor = getCurrentUser();

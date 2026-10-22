@@ -11,6 +11,7 @@ import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.MarkRepository;
 import com.campuscore.backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -140,6 +141,7 @@ public class EnrollmentService {
      * enrollment that already has graded work would silently move those results
      * into a different term.
      */
+    @Transactional
     public Enrollment updateEnrollment(
             Long enrollmentId,
             String semester,
@@ -196,6 +198,7 @@ public class EnrollmentService {
      * be orphaned and the academic history lost. Recording the outcome through the
      * status is the safe alternative.
      */
+    @Transactional
     public void deleteEnrollment(Long enrollmentId) {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -227,6 +230,7 @@ public class EnrollmentService {
         );
     }
 
+    @Transactional
     public Enrollment createEnrollment(
             Long studentId,
             Long courseId,

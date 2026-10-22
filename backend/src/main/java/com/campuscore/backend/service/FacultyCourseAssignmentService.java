@@ -11,6 +11,7 @@ import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.FacultyCourseAssignmentRepository;
 import com.campuscore.backend.repository.FacultyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -103,6 +104,7 @@ public class FacultyCourseAssignmentService {
     // Writes
     // ------------------------------------------------------------------
 
+    @Transactional
     public FacultyAssignmentResponse assignFaculty(Long courseId, Long facultyId) {
         Course course = requireCourse(courseId);
         Faculty faculty = requireAssignableFaculty(facultyId);
@@ -141,6 +143,7 @@ public class FacultyCourseAssignmentService {
      * closed rather than deleted, which preserves the teaching history and leaves
      * enrollments, assessments, marks and attendance untouched.
      */
+    @Transactional
     public FacultyAssignmentResponse reassignFaculty(Long courseId, Long facultyId) {
         Course course = requireCourse(courseId);
         Faculty faculty = requireAssignableFaculty(facultyId);
@@ -198,6 +201,7 @@ public class FacultyCourseAssignmentService {
      * refused, because that would leave existing student records without an
      * assigned faculty member; reassign instead.
      */
+    @Transactional
     public void removeAssignment(Long courseId, Long facultyId) {
         Course course = requireCourse(courseId);
         FacultyCourseAssignment assignment =

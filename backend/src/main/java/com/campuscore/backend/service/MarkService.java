@@ -10,6 +10,7 @@ import com.campuscore.backend.repository.AssessmentRepository;
 import com.campuscore.backend.repository.EnrollmentRepository;
 import com.campuscore.backend.repository.MarkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -107,6 +108,7 @@ public class MarkService {
      * <p>enteredAt is deliberately left alone: it records when the mark was
      * entered, and correcting the value is not a re-entry.
      */
+    @Transactional
     public Mark updateMark(Long id, MarkRequest request) {
         Mark mark = markRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -153,6 +155,7 @@ public class MarkService {
      * therefore allowed, with the enrollment scope re-checked so the route's
      * role rule is not the only thing protecting the row.
      */
+    @Transactional
     public void deleteMark(Long id) {
         Mark mark = markRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -211,6 +214,7 @@ public class MarkService {
         accessScope.requireCourseAccess(courseId);
     }
 
+    @Transactional
     public Mark createMark(
             Long enrollmentId,
             Long assessmentId,
