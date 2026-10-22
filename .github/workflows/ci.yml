@@ -35,7 +35,7 @@ jobs:
         # The integration tests run against a real database. This database is
         # created and destroyed by the runner, so the synthetic demo seed is
         # applied to it and never to a shared or production database.
-        run: mysql --protocol=tcp -h 127.0.0.1 -uroot < backend/database/demo-data.sql
+        run: mysql --protocol=tcp -h 127.0.0.1 -uroot campuscore < backend/database/demo-data.sql
       - name: Compile and test backend
         working-directory: backend
         env:
