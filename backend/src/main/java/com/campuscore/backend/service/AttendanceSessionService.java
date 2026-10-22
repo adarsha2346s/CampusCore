@@ -89,8 +89,25 @@ public class AttendanceSessionService {
     }
 
     public List<AttendanceSession> getSessionsByFaculty(Long facultyId) {
-        // A faculty member may only list their own sessions; an administrator
-        // may list anyone's.
+        requireOwnFacultyOrAdmin(facultyId);
+        return attendanceSessionRepository.findByFacultyFacultyId(facultyId);
+    }
+
+    public Page<AttendanceSession> getSessionsByFacultyPage(Long facultyId, Pageable pageable) {
+        requireOwnFacultyOrAdmin(facultyId);
+        return attendanceSessionRepository.findByFacultyFacultyId(facultyId, pageable);
+    }
+
+    /**
+     * A faculty member may only list their own sessions; an administrator may
+     * list anyone's.
+     *
+     * <p>Both the unpaged and the paged listing go through this one check, so
+     * asking for a page can never widen the set of sessions a caller may read.
+     * The check fails closed: an account whose faculty profile cannot be
+     * resolved is refused rather than treated as an administrator.
+     */
+    private void requireOwnFacultyOrAdmin(Long facultyId) {
         if (!accessScopeIsUsable() || !accessScope.isAdmin()) {
             Long currentFacultyId = currentFacultyIdOrThrow();
             if (!currentFacultyId.equals(facultyId)) {
@@ -98,11 +115,6 @@ public class AttendanceSessionService {
                         "You cannot list another faculty member's attendance sessions");
             }
         }
-        return attendanceSessionRepository.findByFacultyFacultyId(facultyId);
-    }
-
-    public Page<AttendanceSession> getSessionsByFacultyPage(Long facultyId, Pageable pageable) {
-        return attendanceSessionRepository.findByFacultyFacultyId(facultyId, pageable);
     }
 
     public AttendanceSession createSession(
