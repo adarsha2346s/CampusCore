@@ -1,11 +1,14 @@
 package com.campuscore.backend.repository;
 
 import com.campuscore.backend.entity.Assessment;
+import com.campuscore.backend.support.IntegrationDataSource;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -36,6 +39,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EnabledIfSystemProperty(named = "cc.it.datasource.url", matches = ".+")
 @Transactional
 class AssessmentRepositoryStudentScopeIT {
+
+    /**
+     * Connects the opt-in integration datasource onto Spring Boot's own
+     * datasource properties. Without this the context has no driver and the
+     * test cannot run at all.
+     */
+    @DynamicPropertySource
+    static void integrationDataSource(DynamicPropertyRegistry registry) {
+        IntegrationDataSource.register(registry);
+    }
 
     @Autowired
     private AssessmentRepository assessmentRepository;

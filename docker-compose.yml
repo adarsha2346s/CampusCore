@@ -13,6 +13,10 @@ services:
     # for local database access.
     volumes:
       - campuscore-mysql:/var/lib/mysql
+      # schema.sql is the complete baseline: it creates every table, including the
+      # optimistic-locking `version` columns, so a fresh volume yields exactly the
+      # schema the application validates against. It is applied only when the
+      # volume is first created.
       - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]

@@ -1,3 +1,22 @@
+-- CampusCore baseline schema.
+--
+-- This file is the COMPLETE current baseline. Applying it to an empty database
+-- produces exactly the schema the application expects, so a fresh install needs
+-- no follow-up script.
+--
+-- The `version` columns below are the optimistic-locking columns mapped by
+-- @Version on the Assessment, Enrollment, Mark and AttendanceSession entities.
+-- They are part of the baseline because spring.jpa.hibernate.ddl-auto=validate
+-- refuses to start when a mapped column is absent.
+--
+-- Databases created before this baseline was completed do not have those
+-- columns. Upgrade them with:
+--
+--   mysql campuscore < backend/database/migrations/V3__optimistic_locking_version_columns.sql
+--
+-- That script is idempotent: it adds each column only when it is missing, so it
+-- is safe to run against a database created from this file and safe to re-run.
+
 USE campuscore;
 
 CREATE TABLE department (
@@ -127,6 +146,7 @@ CREATE TABLE enrollment (
                             academic_year VARCHAR(20) NOT NULL,
                             enrollment_date DATE NOT NULL,
                             status ENUM('ENROLLED', 'DROPPED', 'COMPLETED') NOT NULL DEFAULT 'ENROLLED',
+                            version BIGINT NOT NULL DEFAULT 0,
 
                             CONSTRAINT uk_student_course_semester
                                 UNIQUE (student_id, course_id, semester, academic_year),
@@ -156,6 +176,7 @@ CREATE TABLE assessment (
                             max_marks DECIMAL(6,2) NOT NULL,
                             weight DECIMAL(5,2) NOT NULL,
                             assessment_date DATE,
+                            version BIGINT NOT NULL DEFAULT 0,
 
                             CONSTRAINT fk_assessment_course
                                 FOREIGN KEY (course_id)
@@ -169,6 +190,7 @@ CREATE TABLE mark (
                       assessment_id BIGINT NOT NULL,
                       marks_obtained DECIMAL(6,2) NOT NULL,
                       entered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      version BIGINT NOT NULL DEFAULT 0,
 
                       CONSTRAINT uk_enrollment_assessment
                           UNIQUE (enrollment_id, assessment_id),
@@ -191,6 +213,7 @@ CREATE TABLE attendance_session (
                                     session_date DATE NOT NULL,
                                     topic VARCHAR(255),
                                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                    version BIGINT NOT NULL DEFAULT 0,
 
                                     CONSTRAINT fk_attendance_session_course
                                         FOREIGN KEY (course_id)

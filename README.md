@@ -86,6 +86,18 @@ Major collection endpoints support server-side pagination when both `page` and `
 
 The schema links users to student/faculty profiles, departments to courses, students and courses through enrollments, assessments and marks to course/enrollment records, and attendance records to sessions/enrollments. Audit logs record supported administrative actions. The schema file creates tables only; it does not provide demo records or credentials. Hibernate is configured to validate the schema rather than create or update it.
 
+`backend/database/schema.sql` is the **complete baseline**. Applying it to an empty database produces exactly the schema the application expects, so a fresh install needs no follow-up script and the backend starts with `ddl-auto=validate` unchanged.
+
+### Upgrading a database created from an earlier baseline
+
+Databases created before the baseline was completed do not carry the optimistic-locking `version` columns on `mark`, `assessment`, `enrollment` and `attendance_session`. The application refuses to start against such a database (`Schema validation: missing column [version] in table [assessment]`). Upgrade it with the idempotent migration script, which adds each column only when it is missing and is therefore safe to run more than once:
+
+```sh
+mysql campuscore < backend/database/migrations/V3__optimistic_locking_version_columns.sql
+```
+
+There is no Flyway or Liquibase in this project, so scripts are applied by hand. `backend/database/migrations/BACKLOG.md` records the migration log and the reasoning behind each change. Do not run a migration against production without approval.
+
 ### Optional synthetic demo data
 
 `backend/database/demo-data.sql` contains synthetic CampusCore records for a disposable demo database. Use it only after creating a fresh, isolated database and applying `backend/database/schema.sql`:
@@ -120,7 +132,7 @@ The `frontend` image compiles the application at build time and serves the stati
 
 ### Run services separately
 
-1. Create a MySQL database and apply `backend/database/schema.sql` using your MySQL client.
+1. Create a MySQL database and apply `backend/database/schema.sql` using your MySQL client. The schema file is the complete baseline; if the database already exists, apply the migration scripts in `backend/database/migrations/` instead (see [Upgrading a database created from an earlier baseline](#upgrading-a-database-created-from-an-earlier-baseline)).
 2. Copy `backend/src/main/resources/application-example.properties` to the ignored `backend/src/main/resources/application.properties`; set local DB values and supply `JWT_SECRET` as an environment variable. Never commit the local properties file.
 3. Start the backend from `backend/` with `./mvnw spring-boot:run`.
 4. From `frontend/`, run `npm ci`, copy `.env.example` to `.env`, set `VITE_API_BASE_URL` if needed, and run `npm run dev`.

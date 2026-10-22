@@ -7,15 +7,19 @@ import com.campuscore.backend.entity.Enrollment;
 import com.campuscore.backend.entity.Mark;
 import com.campuscore.backend.entity.Student;
 import com.campuscore.backend.entity.User;
+import com.campuscore.backend.support.IntegrationDataSource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -45,12 +49,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @ActiveProfiles("it")
+@EnabledIfSystemProperty(named = "cc.it.datasource.url", matches = ".+")
 @TestPropertySource(properties = {
         "jwt.secret=optimistic-locking-test-secret-value-32b",
         "jwt.expiration=3600000",
         "app.cors.allowed-origins=http://localhost:5173"
 })
 class OptimisticLockingIT {
+
+    /**
+     * Connects the opt-in integration datasource onto Spring Boot's own
+     * datasource properties. Without this the context has no driver and the
+     * test cannot run at all.
+     */
+    @DynamicPropertySource
+    static void integrationDataSource(DynamicPropertyRegistry registry) {
+        IntegrationDataSource.register(registry);
+    }
 
     @Autowired
     private MarkRepository marks;

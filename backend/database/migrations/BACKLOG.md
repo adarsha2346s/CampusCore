@@ -4,16 +4,33 @@ Migrations are applied by hand. There is no Flyway or Liquibase in this project,
 ordering is a manual responsibility. `spring.jpa.hibernate.ddl-auto=validate` will
 refuse to start the application until the matching script has been run.
 
+## The baseline and the upgrade scripts
+
+`database/schema.sql` is the **complete current baseline**. Applying it to an empty
+database produces exactly the schema the application expects, so a fresh install
+needs no follow-up script and no ordering to remember.
+
+`database/migrations/` holds the scripts that upgrade databases created from an
+earlier baseline. They are additive and idempotent: each one adds a column only
+when it is missing, so it is safe to run against a database that already has it
+and safe to run more than once.
+
+| Database state | What to run |
+|---|---|
+| New / empty | `database/schema.sql` only |
+| Created from an earlier baseline | `database/schema.sql` was already applied; run the migration scripts in `database/migrations/` in version order |
+
 | Script | What it does | Status |
 |---|---|---|
 | `V2__faculty_course_assignment.sql` | faculty/course assignment table | applied in development |
-| `V3__optimistic_locking_version_columns.sql` | `version` column on four academic tables | **must be applied before deploying a build that maps `@Version`** |
+| `V3__optimistic_locking_version_columns.sql` | `version` column on four academic tables | **already part of the baseline; run it only against a database created before the baseline was completed** |
 
 ## APPLIED IN CODE — V3 optimistic locking (`@Version`)
 
-**Status: the entity mapping ships in Phase 4. The script is committed but must be
-run by hand against any existing database first, including production, and only
-with approval.**
+**Status: the entity mapping ships in Phase 4. The `version` columns are now part of
+`database/schema.sql`, so a fresh install is complete. A database created before
+that change must still run this script by hand, including production, and only with
+approval.**
 
 ### Why it is needed now
 
@@ -63,8 +80,10 @@ mvn test -Dtest=OptimisticLockingIT \
 ### Do not
 
 - run V3 against production without approval,
-- edit `database/schema.sql` to add the columns. It is the V1 baseline for fresh
-  installs; incremental changes belong in `migrations/`,
+- remove the `version` columns from `database/schema.sql`. The baseline must stay
+  complete: a fresh install applies that file alone and the application starts with
+  `ddl-auto=validate`. Incremental changes for existing databases belong in
+  `migrations/`,
 - add `@Version` speculatively to the remaining entities. It changes the UPDATE
   statement for all writes and turns a lost update into a 409 that every caller
   then has to handle.
